@@ -24,6 +24,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+.git_push_tracker.md
 
 # User uploaded media
 .user_uploaded/
