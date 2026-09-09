@@ -25,6 +25,12 @@ Thumbs.db
 .idea/
 *.log
 .git_push_tracker.md
+implementation_plan.md
+
+# Personal Reference Files
+*.docx
+*.pdf
+Phase-I.tex
 
 # User uploaded media
 .user_uploaded/
