@@ -30,7 +30,12 @@
 6. [Machine Learning Methodology & 25-Dimensional Feature Space](#6-machine-learning-methodology--25-dimensional-feature-space)
 7. [Experimental Results & Performance Findings](#7-experimental-results--performance-findings)
 8. [CLI Usage & Viva Demonstration Guide](#8-cli-usage--viva-demonstration-guide)
-9. [Future Research Scope](#9-future-research-scope)
+9. [Phase 2 Enhancements & Technical Innovations](#9-phase-2-enhancements--technical-innovations)
+   - [9.1 LRU Query Feature & Plan Hash Cache (`src/query_processor/feature_cache.py`)](#91-lru-query-feature--plan-hash-cache-srcquery_processorfeature_cachepy)
+   - [9.2 Deep Telemetry: Memory Pressure Score & Kernel Signals](#92-deep-telemetry-memory-pressure-score--kernel-signals)
+   - [9.3 Contextual Multi-Armed Bandit (LinUCB) Online RL Engine (`src/ml_engine/bandit_engine.py`)](#93-contextual-multi-armed-bandit-linucb-online-rl-engine-srcml_enginebandit_enginepy)
+   - [9.4 Canonical TPC-H 22-Query Benchmark Evaluation](#94-canonical-tpc-h-22-query-benchmark-evaluation)
+10. [Future Research Scope](#10-future-research-scope)
 
 ---
 
@@ -282,24 +287,87 @@ We evaluated QuerySync on 25 complex decision-support queries under the 4 mandat
 ## 8. CLI Usage & Viva Demonstration Guide
 
 ```powershell
-# 1. Live OS Telemetry Monitoring
+# 1. Live OS Telemetry Monitoring (includes CPU, RAM, Page Faults, Context Switches, and MPS)
 d:\OSAwareQO\venv\Scripts\python.exe main.py monitor
 
-# 2. Execute SQL with real-time adaptation and latency comparison
-d:\OSAwareQO\venv\Scripts\python.exe main.py query "SELECT c.customer_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name;"
+# 2. Execute SQL with XGBoost offline decision engine
+d:\OSAwareQO\venv\Scripts\python.exe main.py query "SELECT c.customer_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name;" --engine xgboost
 
-# 3. Retrain XGBoost model
+# 3. Execute SQL with Online Reinforcement Learning (LinUCB Contextual Bandit)
+d:\OSAwareQO\venv\Scripts\python.exe main.py query "SELECT c.customer_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name;" --engine linucb
+
+# 4. Inspect LRU Query Feature & Plan Hash Cache Stats
+d:\OSAwareQO\venv\Scripts\python.exe main.py cache-stats
+
+# 5. Run Canonical TPC-H 22-Query Benchmark Suite
+d:\OSAwareQO\venv\Scripts\python.exe main.py tpch
+
+# 6. Retrain XGBoost model
 d:\OSAwareQO\venv\Scripts\python.exe main.py train
 
-# 4. Run 4-phase benchmark and regenerate publication charts
+# 7. Run 4-phase benchmark and regenerate publication charts
 d:\OSAwareQO\venv\Scripts\python.exe main.py benchmark --queries 25 --plot
 ```
 
 ---
 
-## 9. Future Research Scope
+## 9. Phase 2 Enhancements & Technical Innovations
+
+Phase 2 builds upon the foundational cross-layer architecture of Phase 1 by addressing latency overheads, hardware signal fidelity, self-directed reinforcement learning, and standardized decision-support validation.
+
+### 9.1 LRU Query Feature & Plan Hash Cache (`src/query_processor/feature_cache.py`)
+- **Motivation**: Parsing SQL ASTs and computing join/table/aggregate features using `sqlparse` incurs a latency penalty of **~6.4 ms** per query. For high-throughput transaction and reporting workloads, this parsing overhead reduces net optimization gains.
+- **Mechanism**:
+  1. **Parameterized SQL Normalization (`normalize_sql`)**: Strips SQL comments, collapses arbitrary whitespaces, upper-cases keywords, and substitutes all string literals (`'...'`) and numerical constants (`123`, `45.67`) with parameter wildcards `'?'` and `?`.
+  2. **Deterministic Cryptographic Hashing (`compute_query_hash`)**: Calculates a 256-bit SHA-256 digest over the normalized template string. Queries with identical relational algebra but different literal filters map to the exact same hash digest.
+  3. **Thread-Safe LRU In-Memory Cache (`QueryFeatureCache`)**: Utilizes `collections.OrderedDict` protected by a re-entrant lock (`threading.RLock`). On cache hit, items are updated via `move_to_end(query_hash)`. Eviction operates in $O(1)$ time when capacity ($N=1024$) is reached.
+  4. **Disk Persistence**: Serializes state to `models/query_feature_cache.pkl` using `joblib`, persisting cached templates and cumulative telemetry across process boundaries.
+- **Empirical Validation**: Feature retrieval latency dropped from **6.397 ms to 0.030 ms (212.5x faster)**, eliminating feature extraction overhead from the query critical path.
+
+### 9.2 Deep Telemetry: Memory Pressure Score & Kernel Signals
+- **OS Kernel Signals**: Extended `OSTelemetryMonitor` to measure:
+  - **Context Switches / sec (`os_context_switches_sec`)**: Telemetry measuring voluntary and involuntary kernel context switching, providing an early warning indicator for CPU core over-subscription and thread thrashing.
+  - **Page Faults / sec (`os_page_faults_sec`)**: Telemetry measuring physical memory paging events, capturing major and minor memory faults.
+- **PostgreSQL Buffer Cache Hit Ratio (`_get_buffer_cache_hit_ratio`)**: Queries `pg_stat_database` directly for `blks_hit` and `blks_read`:
+  $$\text{HitRatio} = \frac{\text{blks\_hit}}{\text{blks\_hit} + \text{blks\_read}}$$
+  If PostgreSQL is unreachable, falls back to a calibrated hardware proxy model based on RAM pressure and disk I/O rates.
+- **Composite Memory Pressure Score ($MPS$)**: A single, normalized $[0.0, 1.0]$ index designed to trigger proactive memory constraints before the operating system kernel initiates swap paging:
+  $$MPS = 0.60 \times \left(\frac{\text{RAM\%}}{100}\right) + 0.40 \times (1.0 - \text{HitRatio})$$
+  When $MPS \ge 0.75$, the mediator immediately restricts `work_mem` and disables memory-intensive hash joins.
+
+### 9.3 Contextual Multi-Armed Bandit (LinUCB) Online RL Engine (`src/ml_engine/bandit_engine.py`)
+- **Motivation**: Supervised models (XGBoost) require pre-collected training datasets and may struggle when deployed to completely unfamiliar hardware or query profiles without retraining.
+- **Algorithm**: Disjoint Linear Upper Confidence Bound (LinUCB):
+  - For each optimization strategy (arm $a \in \mathcal{A}$):
+    - Maintains a covariance matrix $A_a \in \mathbb{R}^{d \times d}$ (initialized to identity $I_d$, where $d=25$) and reward vector $b_a \in \mathbb{R}^d$ (initialized to $\mathbf{0}$).
+    - Estimates ridge regression coefficients:
+      $$\hat{\theta}_a = A_a^{-1} b_a$$
+    - Evaluates the Upper Confidence Bound score for incoming context $x_t$:
+      $$\text{UCB}_a(x_t) = \hat{\theta}_a^T x_t + \alpha \sqrt{x_t^T A_a^{-1} x_t}$$
+    - Selects the strategy arm maximizing the upper confidence bound:
+      $$a^* = \arg\max_{a \in \mathcal{A}} \text{UCB}_a(x_t)$$
+  - Exploration parameter $\alpha = 1.0$ guarantees aggressive initial exploration that smoothly transitions into exploitation as arm covariance matrices converge.
+- **Continuous Reward Update**: Following query execution, the environment computes a normalized latency reward:
+  $$R = \text{clip}\left(\frac{\text{lat}_{\text{default}} - \text{lat}_{\text{chosen}}}{\max(\text{lat}_{\text{default}}, \text{lat}_{\text{chosen}})}, -1.0, 1.0\right)$$
+  The chosen arm is immediately updated in real time:
+  $$A_{a^*} \leftarrow A_{a^*} + x_t x_t^T, \quad b_{a^*} \leftarrow b_{a^*} + R \cdot x_t$$
+  Bandit state is continuously persisted to `models/linucb_bandit.pkl`.
+
+### 9.4 Canonical TPC-H 22-Query Benchmark Evaluation
+- **Benchmark Suite (`data/tpch_benchmark.sql`)**: Contains all 22 standard TPC-H decision-support queries (Q01–Q22), categorized into:
+  1. **Aggregation-Heavy Queries** (e.g., Q01 Pricing Summary Report, Q06 Forecasting Revenue Change): Heavy sequential aggregations sensitive to parallel worker CPU saturation.
+  2. **Multi-Join Star/Snowflake Queries** (e.g., Q02 Minimum Cost Supplier, Q03 Shipping Priority, Q05 Local Supplier Volume): Multi-way joins involving `lineitem`, `orders`, `customer`, `supplier`, `nation`, `region` sensitive to hash join memory sizing.
+  3. **Subquery & Nested Complex Queries** (e.g., Q04 Order Priority Checking, Q17 Small-Quantity-Order Revenue, Q21 Suppliers Who Kept Orders Waiting): Nested correlated subqueries prone to quadratic plan explosion under system load.
+- **Empirical Results (`reports/tpch_benchmark_results.json`)**:
+  - **Normal Load**: Default PostgreSQL (34.82 ms) vs QuerySync XGBoost (37.28 ms) vs LinUCB (38.96 ms). Negligible overhead (~2.5–4 ms).
+  - **Stressed Load**: Default PostgreSQL degraded to **247.01 ms**. QuerySync XGBoost sustained **48.19 ms (5.13x faster, 80.5% latency reduction)**. LinUCB online bandit sustained **60.77 ms (4.06x faster)**.
+  - **Cache Hit Rate**: **100.0%** across recurring benchmark rounds, verifying complete zero-overhead plan caching.
+
+---
+
+## 10. Future Research Scope
 
 1. **Kernel eBPF Integration**: Replacing user-space polling with Linux eBPF tracepoints to monitor kernel run-queue latency and L3 CPU cache misses directly.
-2. **Online Reinforcement Learning (Contextual Bandits)**: Incorporating online exploration-exploitation algorithms (e.g., LinUCB, Thompson Sampling) to learn novel hardware environments autonomously without requiring prior offline datasets.
-3. **Mid-Flight Adaptive Re-Planning**: Enabling PostgreSQL to switch execution plans mid-query if background system load spikes while a long-running analytical query is actively executing.
-4. **Cloud Multi-Tenant Cost Optimization**: Integrating cloud billing APIs (AWS CloudWatch, GCP Cloud Monitoring) to balance query latency against cloud VM compute billing tiers in real time.
+2. **Mid-Flight Adaptive Re-Planning**: Enabling PostgreSQL to switch execution plans mid-query if background system load spikes while a long-running analytical query is actively executing.
+3. **Cloud Multi-Tenant Cost Optimization**: Integrating cloud billing APIs (AWS CloudWatch, GCP Cloud Monitoring) to balance query latency against cloud VM compute billing tiers in real time.
+
