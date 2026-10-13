@@ -99,13 +99,13 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
 
     # 4. Orders
     print(f"[Seeder] Inserting {num_orders} orders...")
-    start_dt = date(2022, 1, 1)
+    start_dt = date(1992, 1, 1)
     orders_data = [
         (
             random.randint(1, num_customers),
             random.choice(["F", "O", "P"]),
             round(random.uniform(50.0, 15000.0), 2),
-            start_dt + timedelta(days=random.randint(0, 700)),
+            start_dt + timedelta(days=random.randint(0, 2400)),
         )
         for i in range(1, num_orders + 1)
     ]
@@ -124,7 +124,7 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
             random.randint(1, 50),
             round(random.uniform(20.0, 5000.0), 2),
             round(random.choice([0.0, 0.02, 0.05, 0.08, 0.10]), 2),
-            start_dt + timedelta(days=random.randint(1, 750)),
+            start_dt + timedelta(days=random.randint(1, 2500)),
         )
         for i in range(1, num_items + 1)
     ]

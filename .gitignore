@@ -17,6 +17,9 @@ __pycache__/
 *.db
 *.sqlite3
 logs/feedback.db
+pgdata/
+pgsql/
+*.zip
 
 # OS / Editor files
 .DS_Store
