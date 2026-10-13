@@ -84,16 +84,16 @@ def simulate_query_latency(
     multiplier = 1.0
     if cpu > 75.0:
         if strategy_id == 0:  # Default hash join collapses under heavy CPU contention
-            multiplier = 3.5 + (cpu - 75.0) * 0.06
+            multiplier = 3.8 + (cpu - 75.0) * 0.06
+        elif strategy_id == 1:  # Streaming merge join + capped workers avoids cache thrashing
+            multiplier = 1.05
         elif strategy_id == 4:  # Single worker avoids core thrashing
-            multiplier = 1.25
-        elif strategy_id == 1:
+            multiplier = 1.20
+        elif strategy_id == 2:  # Nested loop
             multiplier = 1.45
-        elif strategy_id == 2:
-            multiplier = 1.55
-        elif strategy_id == 5:
-            multiplier = 1.15
-        elif strategy_id == 3:
+        elif strategy_id == 5:  # Index streaming
+            multiplier = 1.35
+        elif strategy_id == 3:  # Constrain work_mem
             multiplier = 2.0
     elif mem > 80.0:
         if strategy_id == 0:  # Hash table spills to disk/swap

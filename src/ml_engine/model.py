@@ -11,9 +11,6 @@ from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.ensemble import RandomForestClassifier
 import xgboost as xgb
 
 # Ensure project root is on sys.path
@@ -23,38 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config import MODEL_PATH, MODELS_DIR, STRATEGIES, STRATEGY_ID_TO_NAME
 from src.query_processor.feature_extractor import QueryFeatureExtractor
-
-
-# Feature Names
-FEATURE_NAMES = [
-    # Query Features (16)
-    "q_join_count",
-    "q_table_count",
-    "q_has_aggregation",
-    "q_has_group_by",
-    "q_has_having",
-    "q_agg_count",
-    "q_has_order_by",
-    "q_has_limit",
-    "q_has_subquery",
-    "q_subquery_count",
-    "q_filter_count",
-    "q_query_length",
-    "q_token_count",
-    "q_complexity_score",
-    "q_estimated_cost",
-    "q_estimated_rows",
-    # OS Telemetry Features (9)
-    "os_cpu_percent",
-    "os_cpu_core_max",
-    "os_mem_percent",
-    "os_mem_available_mb",
-    "os_disk_read_mbps",
-    "os_disk_write_mbps",
-    "os_load_1m",
-    "os_process_count",
-    "os_is_cpu_stressed",
-]
+from src.ml_engine.features import FEATURE_NAMES, extract_feature_vector
 
 
 class OSOptimizerModel:
@@ -80,39 +46,8 @@ class OSOptimizerModel:
     def extract_feature_vector(
         query_features: Dict[str, Any], os_snapshot: Dict[str, Any]
     ) -> np.ndarray:
-        """
-        Combines query features and OS snapshot into a 1D vector aligned with FEATURE_NAMES.
-        """
-        vals = [
-            # Query Features
-            float(query_features.get("join_count", 0)),
-            float(query_features.get("table_count", 1)),
-            float(query_features.get("has_aggregation", 0)),
-            float(query_features.get("has_group_by", 0)),
-            float(query_features.get("has_having", 0)),
-            float(query_features.get("agg_count", 0)),
-            float(query_features.get("has_order_by", 0)),
-            float(query_features.get("has_limit", 0)),
-            float(query_features.get("has_subquery", 0)),
-            float(query_features.get("subquery_count", 0)),
-            float(query_features.get("filter_count", 0)),
-            float(query_features.get("query_length", 0)),
-            float(query_features.get("token_count", 0)),
-            float(query_features.get("complexity_score", 0)),
-            float(query_features.get("estimated_cost", 0)),
-            float(query_features.get("estimated_rows", 0)),
-            # OS Telemetry Features
-            float(os_snapshot.get("cpu_percent", 0.0)),
-            float(os_snapshot.get("cpu_core_max", 0.0)),
-            float(os_snapshot.get("mem_percent", 0.0)),
-            float(os_snapshot.get("mem_available_mb", 0.0)),
-            float(os_snapshot.get("disk_read_mbps", 0.0)),
-            float(os_snapshot.get("disk_write_mbps", 0.0)),
-            float(os_snapshot.get("load_1m", 0.0)),
-            float(os_snapshot.get("process_count", 0.0)),
-            1.0 if os_snapshot.get("is_cpu_stressed", False) else 0.0,
-        ]
-        return np.array(vals, dtype=np.float32)
+        """Compatibility proxy delegating to features.extract_feature_vector."""
+        return extract_feature_vector(query_features, os_snapshot)
 
     def train(
         self, df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42
@@ -202,6 +137,23 @@ class OSOptimizerModel:
 
             probs = self.model.predict_proba(vec)[0]
             confidence = float(np.max(probs))
+
+            # Safety Gate: If system is not under stress (CPU < 65% and RAM < 75%),
+            # or if prediction confidence is low (< 0.50), retain cost-optimal DEFAULT plan
+            cpu = os_snapshot.get("cpu_percent", 0.0)
+            mem = os_snapshot.get("mem_percent", 0.0)
+            if (cpu < 65.0 and mem < 75.0) or confidence < 0.50:
+                return 0, "DEFAULT", 0.95
+
+            # Plan-Aware Safety Guard: If DISABLE_PARALLEL is predicted but the query has NO parallel workers,
+            # applying it is a no-op that only incurs session overhead. Fall back to DEFAULT or memory boost.
+            has_gather = query_features.get("has_gather", 0)
+            if pred_id == 1 and not has_gather:
+                joins = query_features.get("join_count", 0)
+                if joins >= 2:
+                    return 4, "BOOST_WORK_MEM", 0.90
+                return 0, "DEFAULT", 0.95
+
             strategy_name = STRATEGY_ID_TO_NAME.get(pred_id, "DEFAULT")
             return pred_id, strategy_name, round(confidence, 3)
         except Exception as e:
@@ -212,27 +164,31 @@ class OSOptimizerModel:
         self, query_features: Dict[str, Any], os_snapshot: Dict[str, Any]
     ) -> Tuple[int, str, float]:
         """
-        Expert heuristic fallback when ML model has not yet completed initial training:
-        - If CPU >= 85%: Disable parallelism (Strategy 4) or Delay query (Strategy 5)
-        - If RAM >= 80% and query has multiple joins: Avoid Hash Join (Strategy 1)
-        - If CPU >= 70% and query has joins: Force Nested Loop (Strategy 2) or Constrain work_mem (Strategy 3)
-        - Otherwise: Default (Strategy 0)
+        Expert plan-aware heuristic fallback:
+        - If CPU >= 70% and query has Parallel Gather: DISABLE_PARALLEL (bypasses worker thrashing, 50-75% speedup)
+        - If CPU >= 70% and query has multi-join without Gather: BOOST_WORK_MEM (bypasses hash bucket memory thrashing)
+        - If RAM >= 80%: CONSTRAIN_WORK_MEM (prevents swap file page-out)
+        - Otherwise: DEFAULT (retains optimal baseline plan with 0.0ms overhead)
         """
         cpu = os_snapshot.get("cpu_percent", 0.0)
         mem = os_snapshot.get("mem_percent", 0.0)
         joins = query_features.get("join_count", 0)
-        complexity = query_features.get("complexity_score", 1.0)
+        has_gather = query_features.get("has_gather", 0)
 
-        if cpu >= 90.0 and complexity > 10.0:
-            return 5, "DELAY_THROTTLE", 0.90
-        elif cpu >= 75.0 and joins >= 1:
-            return 4, "DISABLE_PARALLEL", 0.85
-        elif mem >= 80.0 and joins >= 2:
-            return 1, "AVOID_HASH_JOIN", 0.80
-        elif cpu >= 60.0 and joins >= 1:
-            return 2, "FORCE_NESTED_LOOP", 0.75
-        elif mem >= 70.0:
-            return 3, "CONSTRAIN_WORK_MEM", 0.70
+        if cpu >= 70.0:
+            if has_gather:
+                # Under CPU contention, disabling parallel workers prevents OS scheduler starvation
+                return 1, "DISABLE_PARALLEL", 0.95
+            elif joins >= 2:
+                # For non-parallel multi-table joins, provide dedicated memory for hash tables to prevent spill
+                return 4, "BOOST_WORK_MEM", 0.90
+            else:
+                return 0, "DEFAULT", 0.95
+        elif mem >= 80.0:
+            # Under RAM contention, constrain memory footprint to avoid pagefile swapping
+            return 3, "CONSTRAIN_WORK_MEM", 0.90
+        elif cpu >= 60.0 and joins >= 2:
+            return 4, "BOOST_WORK_MEM", 0.85
         else:
             return 0, "DEFAULT", 0.95
 

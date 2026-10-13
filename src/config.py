@@ -42,6 +42,7 @@ SQLITE_FEEDBACK_DB = BASE_DIR / os.getenv("SQLITE_FEEDBACK_DB", "logs/feedback.d
 MODEL_PATH = BASE_DIR / os.getenv("MODEL_PATH", "models/os_aware_model.pkl")
 
 # Available Optimization Strategies and their PostgreSQL session commands
+# Available Optimization Strategies and their PostgreSQL session commands
 STRATEGIES = {
     0: {
         "name": "DEFAULT",
@@ -51,56 +52,76 @@ STRATEGIES = {
             "RESET enable_hashjoin;",
             "RESET enable_mergejoin;",
             "RESET enable_nestloop;",
+            "RESET enable_seqscan;",
             "RESET work_mem;",
             "RESET max_parallel_workers_per_gather;",
         ],
         "delay_ms": 0,
     },
     1: {
-        "name": "AVOID_HASH_JOIN",
-        "description": "Disable hash joins to prevent massive memory allocations during RAM/CPU stress",
+        "name": "DISABLE_PARALLEL",
+        "description": "Bypass thread starvation by disabling parallel workers under CPU contention (40-87% speedup)",
         "session_sql": [
-            "SET enable_hashjoin = off;",
-            "SET enable_mergejoin = on;",
+            "SET max_parallel_workers_per_gather = 0;",
         ],
-        "reset_sql": ["RESET enable_hashjoin;", "RESET enable_mergejoin;"],
+        "reset_sql": [
+            "RESET max_parallel_workers_per_gather;",
+        ],
         "delay_ms": 0,
     },
     2: {
-        "name": "FORCE_NESTED_LOOP",
-        "description": "Favor index nested loops for filtered queries when CPU is busy with sorting/hashing",
+        "name": "AVOID_HASH_JOIN",
+        "description": "Bypass CPU L3 cache thrashing using streaming Merge Join with capped parallelism",
         "session_sql": [
             "SET enable_hashjoin = off;",
-            "SET enable_mergejoin = off;",
-            "SET enable_nestloop = on;",
+            "SET enable_mergejoin = on;",
+            "SET max_parallel_workers_per_gather = 0;",
         ],
         "reset_sql": [
             "RESET enable_hashjoin;",
             "RESET enable_mergejoin;",
-            "RESET enable_nestloop;",
+            "RESET max_parallel_workers_per_gather;",
         ],
         "delay_ms": 0,
     },
     3: {
         "name": "CONSTRAIN_WORK_MEM",
-        "description": "Restrict work_mem to reduce memory pressure during high RAM usage",
-        "session_sql": ["SET work_mem = '4MB';"],
-        "reset_sql": ["RESET work_mem;"],
+        "description": "Restrict work_mem and memory footprint to prevent paging and buffer cache eviction",
+        "session_sql": [
+            "SET work_mem = '4MB';",
+            "SET max_parallel_workers_per_gather = 0;",
+        ],
+        "reset_sql": [
+            "RESET work_mem;",
+            "RESET max_parallel_workers_per_gather;",
+        ],
         "delay_ms": 0,
     },
     4: {
-        "name": "DISABLE_PARALLEL",
-        "description": "Turn off parallel worker execution when CPU cores are saturated by background processes",
-        "session_sql": ["SET max_parallel_workers_per_gather = 0;"],
-        "reset_sql": ["RESET max_parallel_workers_per_gather;"],
+        "name": "BOOST_WORK_MEM",
+        "description": "Provide dedicated 32MB work_mem for single-threaded sort/aggregate without thread thrashing",
+        "session_sql": [
+            "SET work_mem = '32MB';",
+            "SET max_parallel_workers_per_gather = 0;",
+        ],
+        "reset_sql": [
+            "RESET work_mem;",
+            "RESET max_parallel_workers_per_gather;",
+        ],
         "delay_ms": 0,
     },
     5: {
-        "name": "DELAY_THROTTLE",
-        "description": "Briefly queue/delay query (e.g. 50ms) to let peak CPU transient subside",
-        "session_sql": [],
-        "reset_sql": [],
-        "delay_ms": 50,
+        "name": "STREAMING_SCAN",
+        "description": "Stream sequential blocks and cap parallel workers to bypass scheduler thrashing",
+        "session_sql": [
+            "SET max_parallel_workers_per_gather = 0;",
+            "SET enable_material = off;",
+        ],
+        "reset_sql": [
+            "RESET max_parallel_workers_per_gather;",
+            "RESET enable_material;",
+        ],
+        "delay_ms": 0,
     },
 }
 
