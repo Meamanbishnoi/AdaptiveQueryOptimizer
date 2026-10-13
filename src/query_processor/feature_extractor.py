@@ -11,17 +11,46 @@ from sqlparse.sql import IdentifierList, Identifier, Where, Parenthesis
 from sqlparse.tokens import Keyword, DML
 
 
+from src.query_processor.feature_cache import default_feature_cache, QueryFeatureCache
+
+
 class QueryFeatureExtractor:
     """
-    Extracts structural and complexity features from SQL queries.
+    Extracts structural and complexity features from SQL queries,
+    accelerated by an LRU Plan Hash Cache.
     """
 
-    def __init__(self, db_connection=None):
+    def __init__(
+        self,
+        db_connection=None,
+        cache: Optional[QueryFeatureCache] = None,
+    ):
         self.db_connection = db_connection
+        self.cache = cache if cache is not None else default_feature_cache
 
-    def extract_features(self, sql_query: str) -> Dict[str, Any]:
+    def extract_features(
+        self, sql_query: str, bypass_cache: bool = False
+    ) -> Dict[str, Any]:
         """
         Parses SQL query and returns a dictionary of numerical and categorical features.
+        Utilizes the LRU Feature Cache to bypass expensive AST parsing on recurring templates.
+        """
+        if not bypass_cache and self.cache is not None:
+            features, is_hit, q_hash = self.cache.get_or_compute(
+                sql_query, self._compute_features
+            )
+            features["is_cache_hit"] = 1 if is_hit else 0
+            features["query_hash"] = q_hash[:16]
+            return features
+
+        features = self._compute_features(sql_query)
+        features["is_cache_hit"] = 0
+        features["query_hash"] = ""
+        return features
+
+    def _compute_features(self, sql_query: str) -> Dict[str, Any]:
+        """
+        Performs full syntactic AST traversal and metric extraction via sqlparse.
         """
         cleaned_sql = sql_query.strip().rstrip(";")
         formatted = sqlparse.format(cleaned_sql, keyword_case="upper")
@@ -82,7 +111,7 @@ class QueryFeatureExtractor:
         )
 
         # 9. Cost & Rows estimates (from EXPLAIN if available, else heuristic fallback)
-        estimated_cost, estimated_rows = self._get_explain_estimates(cleaned_sql, complexity_score)
+        estimated_cost, estimated_rows, has_gather = self._get_explain_estimates(cleaned_sql, complexity_score)
 
         return {
             "join_count": join_count,
@@ -101,6 +130,8 @@ class QueryFeatureExtractor:
             "complexity_score": round(complexity_score, 2),
             "estimated_cost": estimated_cost,
             "estimated_rows": estimated_rows,
+            "has_gather": has_gather,
+            "default_cost": estimated_cost,
         }
 
     def _estimate_table_count(self, formatted_sql: str, join_count: int) -> int:
@@ -116,7 +147,8 @@ class QueryFeatureExtractor:
     def _get_explain_estimates(self, sql: str, complexity_score: float) -> tuple:
         """
         Attempts to run EXPLAIN (FORMAT JSON) on PostgreSQL connection if available.
-        Otherwise provides a heuristic fallback estimate.
+        Extracts cost, rows, and whether the plan uses parallel workers (Gather).
+        Returns: (estimated_cost, estimated_rows, has_gather)
         """
         if self.db_connection:
             try:
@@ -125,18 +157,25 @@ class QueryFeatureExtractor:
                 cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}")
                 result = cursor.fetchone()
                 if result:
-                    plan_data = result[0] if isinstance(result[0], dict) else json.loads(result[0])
-                    root_plan = plan_data[0].get("Plan", {})
+                    raw_data = result[0]
+                    if isinstance(raw_data, str):
+                        plan_data = json.loads(raw_data)
+                    else:
+                        plan_data = raw_data
+                    plan_str = json.dumps(plan_data)
+                    root_plan = plan_data[0].get("Plan", {}) if isinstance(plan_data, list) else plan_data.get("Plan", {})
                     cost = root_plan.get("Total Cost", 0.0)
                     rows = root_plan.get("Plan Rows", 0)
-                    return float(cost), int(rows)
+                    has_gather = 1 if "Gather" in plan_str else 0
+                    return float(cost), int(rows), has_gather
             except Exception:
                 pass
 
         # Heuristic fallback based on query complexity score
         base_cost = round(10.0 + (complexity_score ** 2) * 25.0, 1)
         base_rows = int(max(10, complexity_score * 500))
-        return base_cost, base_rows
+        has_gather = 1 if complexity_score >= 12.0 else 0
+        return base_cost, base_rows, has_gather
 
     def _empty_features(self, cleaned_sql: str) -> Dict[str, Any]:
         return {
@@ -156,6 +195,8 @@ class QueryFeatureExtractor:
             "complexity_score": 1.0,
             "estimated_cost": 10.0,
             "estimated_rows": 100,
+            "has_gather": 0,
+            "default_cost": 10.0,
         }
 
     @staticmethod
