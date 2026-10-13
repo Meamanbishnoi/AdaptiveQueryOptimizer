@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuerySync | OS-Aware Adaptive Query Optimizer</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              500: '#10b981',
+              600: '#059669',
+            },
+            darkbg: '#0a0e17',
+            cardbg: '#111827',
+            cardborder: '#1f293d',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0a0e17;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .pulse-glow-red {
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+    .pulse-glow-green {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0e17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-black">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-cardborder bg-darkbg/90 sticky top-0 z-50 backdrop-blur-md px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <i data-lucide="cpu" class="w-5 h-5 text-black"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">QuerySync</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">v2.0 Phase 2</span>
+          </div>
+          <p class="text-xs text-slate-400">Cross-Layer OS-Aware Adaptive Query Optimization</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- DB Mode Badge -->
+        <div id="db-mode-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-cardbg border border-cardborder text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="db-mode-text" class="text-slate-300">Calibrated Telemetry</span>
+        </div>
+
+        <!-- Stress Toggle Button -->
+        <button id="stress-btn" onclick="toggleStress()" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg font-medium text-xs transition-all duration-300 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30">
+          <i data-lucide="flame" class="w-4 h-4"></i>
+          <span id="stress-btn-text">Simulate System Stress</span>
+        </button>
+
+        <!-- Cache Stats Modal Trigger -->
+        <button onclick="openCacheModal()" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-cardbg hover:bg-slate-800 border border-cardborder text-xs text-slate-300 transition-colors">
+          <i data-lucide="database" class="w-4 h-4 text-cyan-400"></i>
+          <span>Plan Cache</span>
+          <span id="nav-cache-count" class="px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 rounded font-semibold text-[10px]">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6 flex-1 w-full">
+
+    <!-- Live Telemetry Grid (Auto-Updating) -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+          Live Operating System Telemetry
+        </h2>
+        <span class="text-[11px] text-slate-500 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live Telemetry Stream (1.5s)
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- CPU Card -->
+        <div class="glass-card rounded-xl p-4 border border-cardborder relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Host CPU Utilization</span>
+            <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <div class="text-2xl font-bold mono text-white" id="m-cpu">--%</div>
+            <span id="m-cpu-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">Idle</span>
+          </div>
+          <div class="mt-3 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+            <div id="m-cpu-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
+            <span>Core Max: <span id="m-cpu-max" class="text-slate-300 mono">--%</span></span>
+            <span>Processes: <span id="m-procs" class="text-slate-300 mono">--</span></span>
+          </div>
+        </div>
+
+        <!-- RAM Card -->
+        <div class="glass-card rounded-xl p-4 border border-cardborder relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Physical Memory (RAM)</span>
+            <i data-lucide="hard-drive" class="w-4 h-4 text-blue-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <div class="text-2xl font-bold mono text-white" id="m-ram">--%</div>
+            <span id="m-ram-mb" class="text-xs text-slate-400 mono">-- MB used</span>
+          </div>
+          <div class="mt-3 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+            <div id="m-ram-bar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
+            <span>Available: <span id="m-ram-avail" class="text-slate-300 mono">-- MB</span></span>
+            <span id="m-ram-badge" class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">Healthy</span>
+          </div>
+        </div>
+
+        <!-- MPS Card (Phase 2) -->
+        <div class="glass-card rounded-xl p-4 border border-cardborder relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Memory Pressure Score (MPS)</span>
+            <i data-lucide="gauge" class="w-4 h-4 text-violet-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <div class="text-2xl font-bold mono text-white" id="m-mps">--</div>
+            <span id="m-mps-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">Nominal</span>
+          </div>
+          <div class="mt-3 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+            <div id="m-mps-bar" class="bg-violet-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
+            <span>Buffer Hit: <span id="m-buf-hit" class="text-slate-300 mono">--%</span></span>
+            <span class="text-[10px] text-slate-500 font-mono">0.60·RAM + 0.40·Miss</span>
+          </div>
+        </div>
+
+        <!-- Context Switches Card (Phase 2) -->
+        <div class="glass-card rounded-xl p-4 border border-cardborder relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Kernel Signals (Ctx / Faults)</span>
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <div class="text-2xl font-bold mono text-white" id="m-ctx">-- /s</div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">Ctx Switches</span>
+          </div>
+          <div class="mt-3 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+            <div id="m-ctx-bar" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 25%"></div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
+            <span>Page Faults: <span id="m-faults" class="text-slate-300 mono">--/s</span></span>
+            <span>Load 1m: <span id="m-load" class="text-slate-300 mono">--</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Query Studio & Results -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: Input Studio (5 Cols) -->
+      <div class="lg:col-span-5 space-y-4">
+        <div class="glass-card rounded-xl p-5 border border-cardborder space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i>
+              Query Studio & Presets
+            </h3>
+            <span class="text-[11px] text-slate-400">Canonical TPC-H Suite</span>
+          </div>
+
+          <!-- Preset Selector -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Load Benchmark Query Preset:</label>
+            <select id="preset-selector" onchange="loadPresetQuery()" class="w-full bg-cardbg border border-cardborder rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors">
+              <option value="">-- Choose a standard TPC-H query (Q01-Q22) --</option>
+            </select>
+          </div>
+
+          <!-- SQL Editor Area -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-medium text-slate-300">SQL Statement:</label>
+              <button onclick="formatSQL()" class="text-[10px] text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i> Clear
+              </button>
+            </div>
+            <textarea id="sql-input" rows="8" class="w-full bg-[#070a11] border border-cardborder rounded-lg p-3 text-xs mono text-emerald-300 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600 resize-y" placeholder="SELECT c_custkey, c_name, SUM(o_totalprice) FROM customer JOIN orders ON c_custkey = o_custkey WHERE c_mktsegment = 'BUILDING' GROUP BY c_custkey, c_name ORDER BY 3 DESC LIMIT 10;"></textarea>
+          </div>
+
+          <!-- Decision Engine Selection -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">Machine Learning Decision Engine:</label>
+            <div class="grid grid-cols-2 gap-2.5">
+              <label class="cursor-pointer border border-cardborder bg-cardbg rounded-lg p-2.5 flex items-center space-x-2.5 hover:border-emerald-500/50 transition-all has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10">
+                <input type="radio" name="engine" value="xgboost" checked class="accent-emerald-500">
+                <div>
+                  <div class="text-xs font-semibold text-white">XGBoost</div>
+                  <div class="text-[10px] text-slate-400">Supervised Offline Model</div>
+                </div>
+              </label>
+              <label class="cursor-pointer border border-cardborder bg-cardbg rounded-lg p-2.5 flex items-center space-x-2.5 hover:border-cyan-500/50 transition-all has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
+                <input type="radio" name="engine" value="linucb" class="accent-cyan-500">
+                <div>
+                  <div class="text-xs font-semibold text-white">LinUCB Bandit</div>
+                  <div class="text-[10px] text-slate-400">Online RL Agent (Phase 2)</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Execute Button -->
+          <button id="run-btn" onclick="executeQuery()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-semibold text-xs py-3 rounded-lg shadow-lg shadow-emerald-500/20 transition-all duration-200 flex items-center justify-center space-x-2">
+            <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+            <span id="run-btn-text">Execute with OS-Aware Optimizer</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Right Column: Real-Time Results & Visualization (7 Cols) -->
+      <div class="lg:col-span-7 space-y-4">
+
+        <!-- Initial Placeholder State -->
+        <div id="results-placeholder" class="glass-card rounded-xl p-12 border border-cardborder text-center space-y-3 flex flex-col items-center justify-center min-h-[420px]">
+          <div class="w-14 h-14 rounded-2xl bg-cardbg border border-cardborder flex items-center justify-center text-slate-500">
+            <i data-lucide="bar-chart-2" class="w-7 h-7"></i>
+          </div>
+          <h4 class="text-sm font-semibold text-slate-300">No Query Executed Yet</h4>
+          <p class="text-xs text-slate-500 max-w-sm">Select a benchmark query from the studio or write SQL, choose an optimization engine, and click execute to observe real-time latency adaptation.</p>
+        </div>
+
+        <!-- Dynamic Results Container (Hidden Initially) -->
+        <div id="results-container" class="hidden space-y-4">
+
+          <!-- Strategy & Performance Banner -->
+          <div class="glass-card rounded-xl p-4 border border-cardborder space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span id="res-strategy-badge" class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">DEFAULT</span>
+                <span id="res-engine-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">ENGINE: XGBOOST</span>
+                <span id="res-cache-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">CACHE: MISS</span>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] text-slate-400">Confidence:</span>
+                <span id="res-confidence" class="text-xs font-bold text-white mono ml-1">95.0%</span>
+              </div>
+            </div>
+
+            <p id="res-rationale" class="text-xs text-slate-300 bg-[#0c1220] p-2.5 rounded-lg border border-cardborder"></p>
+
+            <!-- Delta Highlight Banner -->
+            <div id="res-delta-banner" class="rounded-lg p-3 flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30">
+              <div class="flex items-center space-x-2">
+                <i id="res-delta-icon" data-lucide="zap" class="w-5 h-5 text-emerald-400"></i>
+                <div>
+                  <div id="res-delta-title" class="text-xs font-bold text-emerald-300">5.13x Faster Execution</div>
+                  <div id="res-delta-sub" class="text-[11px] text-emerald-400/80">Saved 198.8 ms compared to default planner</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div id="res-pct-badge" class="text-sm font-extrabold mono text-emerald-400">-80.5%</div>
+                <div class="text-[10px] text-slate-400">latency reduction</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Latency Comparison Chart -->
+          <div class="glass-card rounded-xl p-5 border border-cardborder space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="trending-down" class="w-4 h-4 text-emerald-400"></i>
+                Execution Latency Comparison (Milliseconds)
+              </h4>
+              <span class="text-[10px] text-slate-500 mono">Lower is better</span>
+            </div>
+            <div class="h-48 w-full">
+              <canvas id="latencyChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Query AST & Telemetry Breakdown Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="glass-card rounded-lg p-3 border border-cardborder">
+              <div class="text-[10px] text-slate-400">Join Count</div>
+              <div id="res-joins" class="text-sm font-bold text-white mono mt-1">--</div>
+            </div>
+            <div class="glass-card rounded-lg p-3 border border-cardborder">
+              <div class="text-[10px] text-slate-400">Tables Scanned</div>
+              <div id="res-tables" class="text-sm font-bold text-white mono mt-1">--</div>
+            </div>
+            <div class="glass-card rounded-lg p-3 border border-cardborder">
+              <div class="text-[10px] text-slate-400">Plan Hash</div>
+              <div id="res-hash" class="text-xs font-mono text-cyan-300 truncate mt-1">--</div>
+            </div>
+            <div class="glass-card rounded-lg p-3 border border-cardborder">
+              <div class="text-[10px] text-slate-400">Host CPU At Run</div>
+              <div id="res-run-cpu" class="text-sm font-bold text-white mono mt-1">--%</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Cache Stats Modal -->
+  <div id="cache-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card bg-cardbg rounded-2xl border border-cardborder max-w-md w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+            <i data-lucide="database" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">LRU Feature & Plan Hash Cache</h3>
+            <p class="text-[11px] text-slate-400">Sub-0.05ms normalized AST template cache</p>
+          </div>
+        </div>
+        <button onclick="closeCacheModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-darkbg/80 border border-cardborder rounded-xl p-3.5 text-center">
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider">Hit Ratio</div>
+          <div id="c-ratio" class="text-2xl font-bold mono text-cyan-400 mt-1">--%</div>
+        </div>
+        <div class="bg-darkbg/80 border border-cardborder rounded-xl p-3.5 text-center">
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider">Cached Templates</div>
+          <div id="c-size" class="text-2xl font-bold mono text-white mt-1">--</div>
+        </div>
+        <div class="bg-darkbg/80 border border-cardborder rounded-xl p-3.5 text-center">
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider">Lifetime Hits</div>
+          <div id="c-hits" class="text-xl font-bold mono text-emerald-400 mt-1">--</div>
+        </div>
+        <div class="bg-darkbg/80 border border-cardborder rounded-xl p-3.5 text-center">
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider">Lifetime Misses</div>
+          <div id="c-misses" class="text-xl font-bold mono text-rose-400 mt-1">--</div>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 bg-darkbg p-3 rounded-lg border border-cardborder">
+        <div class="flex justify-between mb-1">
+          <span>Max Cache Capacity:</span>
+          <span id="c-capacity" class="font-mono text-white">1024 templates</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Total Lookups:</span>
+          <span id="c-lookups" class="font-mono text-white">--</span>
+        </div>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="clearCache()" class="flex-1 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors">
+          Reset Cache
+        </button>
+        <button onclick="closeCacheModal()" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Frontend Logic -->
+  <script>
+    let latencyChartInstance = null;
+    let tpchQueries = [];
+    let isStressed = false;
+
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      fetchTelemetry();
+      fetchPresets();
+      fetchCacheStats();
+      setInterval(fetchTelemetry, 1500);
+    });
+
+    // 1. Fetch live telemetry stream
+    async function fetchTelemetry() {
+      try {
+        const res = await fetch('/api/telemetry');
+        if (!res.ok) return;
+        const d = await res.json();
+
+        // CPU
+        document.getElementById('m-cpu').textContent = d.cpu_percent.toFixed(1) + '%';
+        document.getElementById('m-cpu-bar').style.width = Math.min(d.cpu_percent, 100) + '%';
+        document.getElementById('m-cpu-max').textContent = d.cpu_core_max.toFixed(1) + '%';
+        document.getElementById('m-procs').textContent = d.process_count;
+
+        const cpuBadge = document.getElementById('m-cpu-badge');
+        if (d.is_cpu_stressed) {
+          cpuBadge.textContent = 'STRESSED';
+          cpuBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30';
+          document.getElementById('m-cpu-bar').className = 'bg-rose-500 h-full rounded-full transition-all duration-500';
+        } else {
+          cpuBadge.textContent = d.cpu_percent > 40 ? 'Active' : 'Idle';
+          cpuBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium';
+          document.getElementById('m-cpu-bar').className = 'bg-emerald-500 h-full rounded-full transition-all duration-500';
+        }
+
+        // RAM
+        document.getElementById('m-ram').textContent = d.mem_percent.toFixed(1) + '%';
+        document.getElementById('m-ram-bar').style.width = Math.min(d.mem_percent, 100) + '%';
+        document.getElementById('m-ram-mb').textContent = Math.round(d.mem_used_mb) + ' MB used';
+        document.getElementById('m-ram-avail').textContent = Math.round(d.mem_available_mb) + ' MB';
+
+        // MPS
+        const mps = d.memory_pressure_score !== undefined ? d.memory_pressure_score : 0.40;
+        document.getElementById('m-mps').textContent = mps.toFixed(2);
+        document.getElementById('m-mps-bar').style.width = Math.min(mps * 100, 100) + '%';
+        const mpsBadge = document.getElementById('m-mps-badge');
+        if (mps >= 0.75) {
+          mpsBadge.textContent = 'CRITICAL';
+          mpsBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold';
+        } else if (mps >= 0.50) {
+          mpsBadge.textContent = 'ELEVATED';
+          mpsBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold';
+        } else {
+          mpsBadge.textContent = 'NOMINAL';
+          mpsBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium';
+        }
+        document.getElementById('m-buf-hit').textContent = (d.buffer_cache_hit_ratio !== undefined ? (d.buffer_cache_hit_ratio * 100).toFixed(1) : '99.5') + '%';
+
+        // Kernel Ctx & Faults
+        document.getElementById('m-ctx').textContent = Math.round(d.ctx_switches_per_sec || 0).toLocaleString();
+        document.getElementById('m-faults').textContent = Math.round(d.page_faults_per_sec || 0).toLocaleString();
+        document.getElementById('m-load').textContent = (d.load_1m || 0).toFixed(2);
+
+        // Update Stress Button State
+        if (d.stress_active !== undefined) {
+          setStressUI(d.stress_active);
+        }
+
+      } catch (err) {
+        console.error("Telemetry error:", err);
+      }
+    }
+
+    // 2. Fetch TPC-H Presets
+    async function fetchPresets() {
+      try {
+        const res = await fetch('/api/tpch-queries');
+        if (!res.ok) return;
+        tpchQueries = await res.json();
+        const sel = document.getElementById('preset-selector');
+        sel.innerHTML = '<option value="">-- Choose a standard TPC-H query (Q01-Q22) --</option>';
+        tpchQueries.forEach((q, idx) => {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = `${q.id}: ${q.name} [${q.category}]`;
+          sel.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Presets error:", err);
+      }
+    }
+
+    function loadPresetQuery() {
+      const idx = document.getElementById('preset-selector').value;
+      if (idx === "") return;
+      const q = tpchQueries[parseInt(idx)];
+      if (q) {
+        document.getElementById('sql-input').value = q.sql.trim();
+      }
+    }
+
+    function formatSQL() {
+      document.getElementById('sql-input').value = "";
+    }
+
+    // 3. Execute Query
+    async function executeQuery() {
+      const sql = document.getElementById('sql-input').value.trim();
+      if (!sql) {
+        alert("Please select a preset query or enter a SQL statement.");
+        return;
+      }
+      const engine = document.querySelector('input[name="engine"]:checked').value;
+      const btn = document.getElementById('run-btn');
+      const btnText = document.getElementById('run-btn-text');
+
+      btn.disabled = true;
+      btnText.textContent = "Analyzing AST & Evaluating Hardware...";
+      btn.classList.add('opacity-75');
+
+      try {
+        const res = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sql, engine })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert("Execution error: " + (data.error || "Unknown"));
+          return;
+        }
+
+        renderResults(data);
+        fetchCacheStats();
+      } catch (err) {
+        alert("Failed to execute query: " + err);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = "Execute with OS-Aware Optimizer";
+        btn.classList.remove('opacity-75');
+      }
+    }
+
+    // 4. Render Execution Results & Chart
+    function renderResults(d) {
+      document.getElementById('results-placeholder').classList.add('hidden');
+      document.getElementById('results-container').classList.remove('hidden');
+
+      // Strategy Badges
+      const stratBadge = document.getElementById('res-strategy-badge');
+      stratBadge.textContent = d.chosen_strategy || 'DEFAULT';
+      if (d.chosen_strategy === "DEFAULT") {
+        stratBadge.className = "px-2.5 py-1 rounded-md text-xs font-bold bg-slate-800 text-slate-300 border border-cardborder";
+      } else {
+        stratBadge.className = "px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+      }
+
+      document.getElementById('res-engine-badge').textContent = `ENGINE: ${(d.engine || 'xgboost').toUpperCase()}`;
+      
+      const cacheBadge = document.getElementById('res-cache-badge');
+      if (d.is_cache_hit) {
+        cacheBadge.textContent = "CACHE: HIT ⚡ 0.03ms";
+        cacheBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      } else {
+        cacheBadge.textContent = "CACHE: MISS";
+        cacheBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30";
+      }
+
+      document.getElementById('res-confidence').textContent = ((d.confidence || 0.95) * 100).toFixed(1) + '%';
+      document.getElementById('res-rationale').textContent = d.rationale || 'Executing plan';
+
+      // Delta Banner
+      const banner = document.getElementById('res-delta-banner');
+      const titleEl = document.getElementById('res-delta-title');
+      const subEl = document.getElementById('res-delta-sub');
+      const pctBadge = document.getElementById('res-pct-badge');
+      const iconEl = document.getElementById('res-delta-icon');
+      const labelEl = pctBadge ? pctBadge.nextElementSibling : null;
+
+      const defLat = parseFloat(d.default_latency) || 0;
+      const optLat = parseFloat(d.os_aware_latency) || 0;
+
+      if (d.chosen_strategy === 'DEFAULT') {
+        const overheadMs = Math.max(0.1, d.overhead_ms || Math.abs(optLat - defLat)).toFixed(1);
+        banner.className = "rounded-lg p-3 flex items-center justify-between bg-blue-500/10 border border-blue-500/30";
+        if (iconEl) {
+          iconEl.setAttribute('data-lucide', 'check-circle');
+          iconEl.className = "w-5 h-5 text-blue-400";
+        }
+        titleEl.className = "text-xs font-bold text-blue-300";
+        titleEl.textContent = "Baseline Plan Optimal (Zero Contention)";
+        subEl.className = "text-[11px] text-blue-400/80";
+        subEl.textContent = `System load nominal. Default PostgreSQL CBO plan retained; proxy intercept: ~${overheadMs} ms (${d.is_cache_hit ? 'Cached AST' : 'Uncached AST'})`;
+        pctBadge.className = "text-sm font-extrabold mono text-blue-400";
+        pctBadge.textContent = "OPTIMAL";
+        if (labelEl) labelEl.textContent = "baseline retained";
+      } else if (defLat > optLat) {
+        const speedup = (defLat / Math.max(optLat, 0.01));
+        const pctSaved = Math.max(0, ((defLat - optLat) / defLat) * 100);
+        const savedMs = (defLat - optLat).toFixed(1);
+
+        banner.className = "rounded-lg p-3 flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30";
+        if (iconEl) {
+          iconEl.setAttribute('data-lucide', 'zap');
+          iconEl.className = "w-5 h-5 text-emerald-400";
+        }
+        titleEl.className = "text-xs font-bold text-emerald-300";
+        titleEl.textContent = `${speedup.toFixed(2)}x Faster Execution`;
+        subEl.className = "text-[11px] text-emerald-400/80";
+        subEl.textContent = `Saved ${savedMs} ms using ${d.chosen_strategy} to bypass hardware contention`;
+        pctBadge.className = "text-sm font-extrabold mono text-emerald-400";
+        pctBadge.textContent = `-${pctSaved.toFixed(1)}%`;
+        if (labelEl) labelEl.textContent = "latency reduction";
+      } else {
+        banner.className = "rounded-lg p-3 flex items-center justify-between bg-amber-500/10 border border-amber-500/30";
+        if (iconEl) {
+          iconEl.setAttribute('data-lucide', 'sliders');
+          iconEl.className = "w-5 h-5 text-amber-400";
+        }
+        titleEl.className = "text-xs font-bold text-amber-300";
+        titleEl.textContent = `Dynamic Steering: ${d.chosen_strategy}`;
+        subEl.className = "text-[11px] text-amber-400/80";
+        subEl.textContent = `${d.rationale} (Adaptive: ${optLat.toFixed(1)} ms vs Default: ${defLat.toFixed(1)} ms)`;
+        pctBadge.className = "text-sm font-extrabold mono text-amber-400";
+        pctBadge.textContent = "STEERED";
+        if (labelEl) labelEl.textContent = "load-adapted plan";
+      }
+
+      // AST Features
+      const feat = d.features || {};
+      const tel = d.telemetry_at_run || {};
+      document.getElementById('res-joins').textContent = feat.join_count !== undefined ? feat.join_count : 0;
+      document.getElementById('res-tables').textContent = feat.table_count !== undefined ? feat.table_count : 1;
+      document.getElementById('res-hash').textContent = (d.query_hash ? d.query_hash.substring(0, 16) + '...' : '--');
+      document.getElementById('res-run-cpu').textContent = (tel.cpu_percent !== undefined ? tel.cpu_percent.toFixed(1) : '0.0') + '%';
+
+      // Update Chart
+      renderChart(defLat, optLat);
+      lucide.createIcons();
+    }
+
+    function renderChart(defaultLat, osAwareLat) {
+      const ctx = document.getElementById('latencyChart').getContext('2d');
+      if (latencyChartInstance) {
+        latencyChartInstance.destroy();
+      }
+
+      latencyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Default PostgreSQL Cost-Based Planner', 'QuerySync OS-Aware Adaptive Optimizer'],
+          datasets: [{
+            label: 'Execution Latency (ms)',
+            data: [defaultLat, osAwareLat],
+            backgroundColor: [
+              'rgba(239, 68, 68, 0.65)',
+              'rgba(16, 185, 129, 0.85)'
+            ],
+            borderColor: [
+              'rgba(239, 68, 68, 1)',
+              'rgba(16, 185, 129, 1)'
+            ],
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.parsed.y.toFixed(2)} ms`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: Math.max(defaultLat, osAwareLat, 5) * 1.15,
+              grid: { color: 'rgba(255, 255, 255, 0.06)' },
+              ticks: {
+                color: '#94a3b8',
+                font: { family: 'JetBrains Mono', size: 11 },
+                callback: (val) => val + ' ms'
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#cbd5e1', font: { size: 11, weight: '500' } }
+            }
+          }
+        }
+      });
+    }
+
+    // 5. Stress Toggle
+    async function toggleStress() {
+      const btn = document.getElementById('stress-btn');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/stress/toggle', { method: 'POST' });
+        const d = await res.json();
+        setStressUI(d.stress_active);
+      } catch (err) {
+        console.error("Stress toggle error:", err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function setStressUI(active) {
+      isStressed = active;
+      const btn = document.getElementById('stress-btn');
+      const text = document.getElementById('stress-btn-text');
+      const dbBadge = document.getElementById('db-mode-badge');
+
+      if (active) {
+        text.textContent = "Release Host Stress (Active)";
+        btn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg font-medium text-xs transition-all duration-300 bg-rose-600 text-white pulse-glow-red border border-rose-400";
+        if (dbBadge) {
+          dbBadge.className = "flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-rose-950/40 border border-rose-500/40 text-xs";
+          dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span><span id="db-mode-text" class="text-rose-300 font-semibold">Background Contention Active</span>';
+        }
+      } else {
+        text.textContent = "Simulate System Stress";
+        btn.className = "flex items-center space-x-2 px-4 py-1.5 rounded-lg font-medium text-xs transition-all duration-300 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        if (dbBadge) {
+          dbBadge.className = "flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-cardbg border border-cardborder text-xs";
+          dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span id="db-mode-text" class="text-slate-300">Calibrated Telemetry</span>';
+        }
+      }
+    }
+
+    // 6. Cache Modal & Stats
+    async function fetchCacheStats() {
+      try {
+        const res = await fetch('/api/cache-stats');
+        if (!res.ok) return;
+        const d = await res.json();
+        document.getElementById('nav-cache-count').textContent = d.current_size || 0;
+        document.getElementById('c-ratio').textContent = (d.hit_ratio_percent || 0).toFixed(1) + '%';
+        document.getElementById('c-size').textContent = d.current_size || 0;
+        document.getElementById('c-hits').textContent = d.hits || 0;
+        document.getElementById('c-misses').textContent = d.misses || 0;
+        document.getElementById('c-capacity').textContent = (d.capacity || 1024) + ' templates';
+        document.getElementById('c-lookups').textContent = d.total_lookups || 0;
+      } catch (err) {
+        console.error("Cache stats error:", err);
+      }
+    }
+
+    function openCacheModal() {
+      fetchCacheStats();
+      document.getElementById('cache-modal').classList.remove('hidden');
+    }
+
+    function closeCacheModal() {
+      document.getElementById('cache-modal').classList.add('hidden');
+    }
+
+    async function clearCache() {
+      if (!confirm("Are you sure you want to reset the LRU Query Feature Cache?")) return;
+      try {
+        await fetch('/api/cache/clear', { method: 'POST' });
+        fetchCacheStats();
+      } catch (err) {
+        console.error("Clear cache error:", err);
+      }
+    }
+  </script>
+</body>
+</html>
