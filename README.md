@@ -1,236 +1,101 @@
-# QuerySync: Cross-Layer OS-Aware Adaptive Query Optimization
+# QuerySync: OS-Aware Query Optimization for PostgreSQL
 
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://python.org)
-[![Machine Learning](https://img.shields.io/badge/ML-XGBoost%20%7C%20Scikit--Learn-orange.svg)](https://xgboost.readthedocs.io/)
-[![Database](https://img.shields.io/badge/DBMS-PostgreSQL-336791.svg)](https://www.postgresql.org/)
+QuerySync sits between an application and PostgreSQL 16. For every query it decides one
+thing: run it with PostgreSQL's **default plan**, or as a **serial plan** (parallel workers
+disabled). The choice is made per query template and per load level, from latencies
+QuerySync has actually measured on this machine.
 
-**QuerySync** is an intelligent, cross-layer database middleware that bridges the operating system hardware metrics with database query optimization.
+**Why that one decision?** Earlier versions of this project tried six planner strategies,
+XGBoost and a LinUCB bandit. Measurements showed that every reliable speed-up came from
+avoiding parallel workers; nothing else made a significant difference, and the ML models
+did not generalize. See [PROJECT_JOURNAL_AND_EVOLUTION.md](PROJECT_JOURNAL_AND_EVOLUTION.md),
+Milestones 11 and 12.
 
-Traditional relational query planners (such as PostgreSQL's cost-based optimizer) operate with a static view of system resources, assuming uninhibited access to CPU cores and memory. Under realistic multi-tenant server workloads—such as background data ingestion, antivirus scans, video rendering, or noisy neighbor processes—resource-heavy query plans (e.g., multi-threaded parallel hash joins) lead to CPU core thrashing, memory exhaustion, and catastrophic query latency spikes.
-
-QuerySync intercepts incoming SQL queries, samples real-time OS telemetry, extracts query structural features, and dynamically predicts the optimal session-level execution plan hints using machine learning (XGBoost).
-
----
-
-## 🏛️ System Architecture
-
-```
-                                  +-----------------------------+
-                                  |   User / Client Application |
-                                  +-----------------------------+
-                                                 |
-                                                 | SQL Query
-                                                 v
-  +---------------------------------------------------------------------------------------+
-  |                          QuerySync Middleware Layer (Python)                          |
-  |                                                                                       |
-  |  +---------------------------+                     +-------------------------------+  |
-  |  |   1. OS Telemetry Agent   |                     |    2. SQL Feature Extractor   |  |
-  |  |         (psutil)          |                     |          (sqlparse)           |  |
-  |  | • CPU % & Core Max        |                     | • Join Count & Table Count    |  |
-  |  | • RAM Available / %       |                     | • Aggregations & Group By     |  |
-  |  | • Disk I/O MB/s & Ops     |                     | • Filters & Query Complexity  |  |
-  |  +---------------------------+                     +-------------------------------+  |
-  |                 \                                                 /                   |
-  |                  \                                               /                    |
-  |                   +---------------------------------------------+                     |
-  |                                                 | Combined Feature Vector (25-dim)     |
-  |                                                 v                                     |
-  |                                +-------------------------------+                      |
-  |                                |   3. ML Decision Engine       |                      |
-  |                                |         (XGBoost)             |                      |
-  |                                | • DEFAULT                     |                      |
-  |                                | • AVOID_HASH_JOIN             |                      |
-  |                                | • FORCE_NESTED_LOOP           |                      |
-  |                                | • CONSTRAIN_WORK_MEM          |                      |
-  |                                | • DISABLE_PARALLEL            |                      |
-  |                                | • DELAY_THROTTLE              |                      |
-  |                                +-------------------------------+                      |
-  |                                                 |                                     |
-  |                                                 v                                     |
-  |  +---------------------------+       Inject Session Plan Hints                        |
-  |  |    4. Feedback Store      |   (e.g., SET enable_hashjoin = off;)                   |
-  |  |    (SQLite/PostgreSQL)    |<-----------------+                                     |
-  |  | • Query & Execution Time  |                  |                                     |
-  |  | • Telemetry & Plan Log    |                  |                                     |
-  |  +---------------------------+                  |                                     |
-  +-------------------------------------------------|-------------------------------------+
-                                                    |
-                                                    v
-                                    +-------------------------------+
-                                    |      PostgreSQL Database      |
-                                    |   (Executes optimal plan)     |
-                                    +-------------------------------+
-```
-
----
-
-## 🚀 Key Results & Research Highlights
-
-In rigorous 4-phase benchmark experiments comparing Default PostgreSQL against QuerySync under synthetic CPU/Memory stress:
-
-| Experimental Condition | Default PostgreSQL (Avg) | QuerySync OS-Aware (Avg) | Performance Improvement |
-|:---|:---:|:---:|:---:|
-| **Normal Load (Idle OS)** | **37.91 ms** | **43.24 ms** | Equivalent (~5 ms telemetry overhead) |
-| **High Load (CPU Stress 85%)** | **223.67 ms** | **43.59 ms** | **5.13x Faster (80.5% Latency Reduction)** |
-
-- **Top Model Features Identified**: `os_is_cpu_stressed`, `os_load_1m`, `os_cpu_percent`, `os_mem_percent`, `q_agg_count`, `q_join_count`.
-- **Adaptation Behavior**: Under CPU stress, QuerySync automatically steered queries away from CPU-saturating parallel hash joins, adapting 100% of complex queries to avoid CPU contention.
-
-Generated research charts can be inspected in the `reports/` folder:
-- `reports/latency_comparison_bar_chart.png`
-- `reports/latency_over_time_under_stress.png`
-- `reports/model_feature_importance.png`
-
----
-
-## 📁 Repository Structure
+## How it works
 
 ```
-OSAwareQO/
-├── .env.example                     # Connection and threshold environment template
-├── requirements.txt                 # Python dependencies
-├── main.py                          # Unified CLI entrypoint
-├── src/
-│   ├── config.py                    # Constants, strategy definitions, DB parameters
-│   ├── telemetry/
-│   │   └── os_monitor.py            # Real-time hardware telemetry agent (psutil, MPS, page faults)
-│   ├── query_processor/
-│   │   ├── feature_cache.py         # Thread-safe LRU AST feature & plan hash cache
-│   │   └── feature_extractor.py     # SQL parser and feature vector generator (sqlparse)
-│   ├── ml_engine/
-│   │   ├── features.py              # Lightweight 25-dim feature vector extraction schema
-│   │   ├── bandit_engine.py         # Contextual Multi-Armed Bandit (LinUCB) RL optimizer
-│   │   ├── dataset_generator.py     # Empirical workload generator
-│   │   ├── model.py                 # XGBoost / Random Forest decision classifier
-│   │   └── train.py                 # Offline model training & evaluation pipeline
-│   ├── mediator/
-│   │   └── query_mediator.py        # Core proxy interceptor (XGBoost/LinUCB) & PostgreSQL hint executor
-│   ├── ui/
-│   │   ├── server.py                # Multithreaded REST API & Web UI server
-│   │   └── templates/
-│   │       └── index.html           # Dark-mode single page dashboard (Tailwind + Chart.js)
-│   └── feedback/
-│       └── feedback_store.py        # Persistent execution & telemetry feedback repository
-├── data/
-│   ├── schema.sql                   # Relational benchmark schema with indexes
-│   ├── seed_data.py                 # Synthetic data populator
-│   ├── benchmark_queries.sql        # Decision support analytical queries
-│   └── tpch_benchmark.sql           # Canonical TPC-H query suite (Q01-Q22)
-├── experiments/
-│   ├── stress_generator.py          # Background multi-core CPU & RAM stress simulator
-│   ├── run_benchmark.py             # 4-Phase evaluation benchmark suite
-│   ├── run_tpch_benchmark.py        # Canonical 22-query TPC-H automated evaluation suite
-│   └── plot_results.py              # Visual charts generator
-├── models/
-│   ├── os_aware_model.pkl           # Serialized trained XGBoost model
-│   ├── linucb_bandit.pkl            # Serialized online LinUCB bandit state
-│   └── query_feature_cache.pkl      # Persistent disk-backed LRU query hash cache
-├── logs/
-│   └── feedback.db                  # SQLite feedback store
-└── reports/
-    ├── benchmark_results.json       # JSON benchmark telemetry output
-    ├── tpch_benchmark_results.json  # Comprehensive TPC-H 22-query benchmark results
-    ├── latency_comparison_bar_chart.png
-    ├── latency_over_time_under_stress.png
-    └── model_feature_importance.png
+query ──► template (SQL with literals removed)
+            │
+            ├─ first time: EXPLAIN - does the default plan use parallel workers?
+            │     no  ──► always DEFAULT (QuerySync never changes these queries)
+            │     yes ──► policy for (template, load level)
+            │
+load level ◄─ telemetry: CPU used by programs other than PostgreSQL (>= 45% = "high")
+            │
+policy:  learning  - alternate DEFAULT / SERIAL until each has 3 runs
+         decided   - SERIAL only if its median is >=10% faster AND it wins >=75% of run pairs;
+                     otherwise DEFAULT
+         re-check  - every 25th run measures the other plan once
+            │
+execute: SERIAL = "BEGIN; SET LOCAL max_parallel_workers_per_gather = 0; <query>" (one round trip)
 ```
 
----
+Decision overhead is about 0.2 ms per query.
 
-## 🛠️ Installation & Setup
+## Project layout
 
-### 1. Activate Environment & Install Dependencies
-```bash
-# Windows
+```
+main.py              CLI: ui | query | bench | policy | monitor
+src/config.py        settings (all overridable in .env)
+src/telemetry.py     background CPU/RAM sampling, load level
+src/winproc.py       Windows: CPU per process in one system call (external vs PostgreSQL)
+src/db.py            PostgreSQL: run(sql, serial), is_parallel(sql)
+src/policy.py        the DEFAULT-vs-SERIAL decision (stored in models/policy.json)
+src/optimizer.py     ties telemetry, policy and database together
+src/server.py        dashboard backend;  src/index.html  dashboard page
+experiments/         benchmark.py (evaluation + chart), stress.py (CPU stress workers)
+data/                schema, seeder, TPC-H-style queries, TPC-H compatibility views
+tests/               unit tests for the policy
+docs/archive/        documents describing earlier versions
+```
+
+## Quick start
+
+```powershell
 .\venv\Scripts\activate
-
-# Install requirements
 pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-Copy `.env.example` to `.env` and adjust your PostgreSQL credentials:
-```ini
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=osaware_db
-PG_USER=postgres
-PG_PASSWORD=postgres
-USE_MOCK_DB=false
-```
-*(Note: If PostgreSQL is not active, QuerySync automatically runs in high-fidelity simulation mode so all components remain fully operational).*
-
----
-
-## 💻 CLI & Web Dashboard Usage Guide
-
-### 0. Launch the Interactive Web Dashboard (Recommended)
-Launch the dark-mode real-time browser dashboard with telemetry gauges, 1-click TPC-H queries, stress simulator, and animated latency comparison charts:
-```bash
+pgsql\pgsql\bin\pg_ctl.exe start -D pgdata -w
 python main.py ui
 ```
-Opens automatically in your browser at `http://127.0.0.1:5000`.
+More detail: [HOW_TO_RUN.md](HOW_TO_RUN.md).
 
-### 1. Live OS Telemetry Monitoring
-Monitor real-time system metrics (CPU %, per-core max, RAM MB, Disk I/O rate, Page Faults, Context Switches, and Memory Pressure Score MPS):
-```bash
-python main.py monitor
-```
+## Results
 
-### 2. Execute SQL Query with OS-Aware Optimizer
-Pass any SQL query to observe real-time feature extraction, LRU plan cache hits, model inference, and latency comparison. Supports both offline XGBoost and online LinUCB engines:
-```bash
-# Using Supervised XGBoost Engine
-python main.py query "SELECT c.customer_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name;" --engine xgboost
+`python main.py bench`: 22 TPC-H-style queries; each mode runs every query 5 times,
+interleaved with the other modes in random order. "Stressed" = CPU workers on 3 of 4 cores at
+a 90% duty cycle (median external CPU ~63%). A query counts as a **win/loss** only if it is
+>10% faster/slower than default **and** a permutation test gives p < 0.05.
+Source: `reports/benchmark.json`, chart `reports/speedup_by_query.png`.
 
-# Using Online Reinforcement Learning (LinUCB Contextual Bandit)
-python main.py query "SELECT c.customer_name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name;" --engine linucb
-```
+| Mode | Normal load: total time | geomean | wins / losses | Stressed: total time | geomean | wins / losses |
+|---|---:|:---:|:---:|---:|:---:|:---:|
+| Default PostgreSQL | 2230 ms | 1.00x | – | 3647 ms | 1.00x | – |
+| A/A control (default vs itself) | 2550 ms | 0.93x | 0 / 0 | 3621 ms | 0.98x | 0 / 0 |
+| Rule (serial when load is high) | 2462 ms | 0.94x | 0 / 0 | 2558 ms | 1.24x | 5 / **1** (Q01 1.7x slower) |
+| **QuerySync adaptive** | **1667 ms (−25%)** | **1.17x** | 2 / 1\* | **2412 ms (−34%)** | **1.22x** | **5 / 0** |
 
-### 3. Inspect LRU Query Feature & Plan Hash Cache Stats
-Inspect template cache capacity, cached AST templates, hits, misses, and hit ratio:
-```bash
-python main.py cache-stats
-```
+\* The one "loss" is Q12, which has no parallel plan: QuerySync ran PostgreSQL's own plan,
+and the 0.4 vs 0.4 ms difference is noise. With 22 queries tested at p < 0.05, about one
+such false positive per mode is expected; the A/A row shows the noise level.
 
-### 4. Run Canonical TPC-H 22-Query Benchmark Suite
-Benchmark all 22 TPC-H queries across Default PostgreSQL vs XGBoost vs LinUCB under normal and stressed conditions:
-```bash
-python main.py tpch
-```
+What this shows:
+- 8 of the 22 queries have parallel plans. Five of them (Q06, Q11, Q14, Q15, Q21) run
+  **2.5–3.2x faster** serially under stress, and 2–3.5x at normal load. For Q01, Q02 and Q18
+  QuerySync measured no reliable gain and mostly keeps the default plan. The 14 queries
+  without parallel plans run exactly as in plain PostgreSQL.
+- **Load-awareness matters for Q01**: a fixed "go serial under load" rule makes it 1.7x slower;
+  QuerySync measured that and kept the parallel plan.
+- Run-to-run noise on this laptop is large (A/A averages vary by up to 7%), so compare runs
+  using the medians and significance marks, not single executions.
 
-### 5. Generate Training Data
-Generate empirical training samples across normal, CPU-stressed, and memory-stressed states:
-```bash
-python main.py collect --samples 400
-```
+## Limitations
 
-### 6. Train the ML Decision Engine
-Train the XGBoost classifier on recorded execution history:
-```bash
-python main.py train
-```
+- The data is a TPC-H-*shaped* synthetic schema (316k rows, several constant columns),
+  not dbgen TPC-H. Call the results "TPC-H-style".
+- One 4-core Windows laptop. Latency there is bimodal (the same plan varies up to ~1.8x),
+  and part of the serial-plan benefit is likely the cost of parallel workers on Windows.
+- Load is synthetic CPU stress; realistic co-located workloads are future work.
 
-### 7. Run the Full 4-Phase Evaluation Benchmark
-Execute the baseline and stressed comparison and generate publication charts:
-```bash
-python main.py benchmark --queries 30 --plot
-```
-
----
-
-## 🔬 Phase 2 Research Innovations
-
-QuerySync Phase 2 introduces four core enhancements to achieve industrial-grade resilience:
-1. **LRU Query Feature & Plan Hash Cache**: Parameterized SQL normalizer (collapses literal strings/constants into `?`) with SHA-256 hashing. Decreases AST parsing overhead from **~6.4 ms to 0.03 ms (212x speedup)** with sub-millisecond retrieval.
-2. **Deep OS Telemetry & Memory Pressure Score (MPS)**: Captures kernel context switches/sec, page faults/sec, and calculates $MPS = 0.60 \times \text{RAM\%} + 0.40 \times (1 - \text{BufferHitRatio})$ to detect swap thrashing before out-of-memory catastrophes occur.
-3. **Online Reinforcement Learning (LinUCB Contextual Bandit)**: Disjoint linear Upper Confidence Bound bandit engine ($A_a \theta_a = b_a$) balancing exploration and exploitation ($\alpha = 1.0$) with live continuous execution reward updates for zero-cold-start adaptive tuning.
-4. **Canonical TPC-H 22-Query Suite**: Comprehensive coverage of decision-support query patterns across Aggregation-Heavy, Multi-Join, and Deeply-Nested Subqueries, demonstrating **5.13x latency speedup** and **100% cache hit rates** under host resource pressure.
-
----
-
-## 👥 Authors
+## Authors
 - **Aman Bishnoi** (Lead) – BTech CSE (AIML), Reg No: 240211396
 - **Pranjali Bhatt** – BTech CSE (AIML), Reg No: 240221381
-- Project Proposal: *Cross-Layer Adaptive Query Processing: Using Machine Learning to Make Databases Aware of System Resources*

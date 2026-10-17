@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuerySync</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --text:#e6edf3; --dim:#8b949e;
+          --blue:#58a6ff; --green:#3fb950; --red:#f85149; --amber:#d29922; }
+  html { color-scheme: dark; }   /* dark native scrollbars, dropdown lists and form controls */
+  * { box-sizing: border-box; scrollbar-color: #484f58 var(--bg); scrollbar-width: thin; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 5px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+  ::-webkit-scrollbar-corner, ::-webkit-resizer { background: var(--bg); }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0; } .sub { color:var(--dim); font-size:13px; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .stat .v { font:600 22px ui-monospace, monospace; } .stat .k { color:var(--dim); font-size:12px; }
+  .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
+  @media (max-width:800px) { .grid { grid-template-columns:1fr; } }
+  select, textarea, input, button { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line);
+          border-radius:6px; padding:8px; font:inherit; }
+  textarea { font:12px ui-monospace, monospace; height:190px; resize:vertical; }
+  button { cursor:pointer; font-weight:600; } button.primary { background:#238636; border-color:#2ea043; }
+  button.stress { width:auto; white-space:nowrap; } button.stress.on { background:#5c1d1d; border-color:var(--red); }
+  label { color:var(--dim); font-size:12px; display:block; margin:8px 0 4px; }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .verdict { padding:10px; border-radius:6px; border:1px solid var(--line); margin-bottom:10px; }
+  .verdict b { display:block; font-size:16px; }
+  .faster { border-color:var(--green); } .slower { border-color:var(--red); }
+  .learning { border-color:var(--amber); } .default, .same { border-color:var(--blue); }
+  .bar { height:22px; border-radius:4px; margin:4px 0 10px; display:flex; align-items:center; padding-left:8px;
+         font:12px ui-monospace, monospace; white-space:nowrap; }
+  .mono { font:12px ui-monospace, monospace; color:var(--dim); word-break:break-word; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td, th { border-bottom:1px solid var(--line); padding:5px 6px; text-align:left; }
+  th { color:var(--dim); font-weight:500; } .table-wrap { overflow-x:auto; }
+  .modal { position:fixed; inset:0; background:rgba(1,4,9,.75); display:none; align-items:flex-start;
+           justify-content:center; padding:24px 16px; z-index:10; overflow-y:auto; }
+  .modal.open { display:flex; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; width:100%; max-width:1050px; padding:16px; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .tabs button { width:auto; } .tabs button.active { border-color:var(--blue); color:var(--blue); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:10px 0 14px; }
+  .tile { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .tile .v { font:600 20px ui-monospace, monospace; } .tile .k { color:var(--dim); font-size:12px; }
+  .chart { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:12px; }
+  .chart h4 { margin:0 0 2px; font-size:13px; } .chart .sub { margin-bottom:6px; }
+  .chart { overflow-x:auto; } .chart svg { width:100%; min-width:680px; height:auto; display:block; }
+  .chart svg text { fill:var(--dim); font:11px system-ui, sans-serif; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--dim); margin-top:4px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .progress { height:8px; background:var(--bg); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:10px 0; }
+  .progress div { height:100%; background:var(--blue); width:0; transition:width .4s; }
+  h3.level { margin:16px 0 4px; font-size:15px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>QuerySync</h1><div class="sub">Runs each query as PostgreSQL's default plan or a serial plan, whichever is measured faster for the current load.</div></div>
+    <div class="row" style="flex:0 0 auto">
+      <button class="stress" onclick="openReport()">Results &amp; charts</button>
+      <button id="stress" class="stress" onclick="toggleStress()">Start CPU stress</button>
+    </div>
+  </header>
+
+  <div class="card stats">
+    <div class="stat"><div class="k">Total CPU</div><div class="v" id="cpu">--</div></div>
+    <div class="stat"><div class="k">External CPU (other programs)</div><div class="v" id="ext">--</div></div>
+    <div class="stat"><div class="k">PostgreSQL CPU</div><div class="v" id="pg">--</div></div>
+    <div class="stat"><div class="k">RAM</div><div class="v" id="mem">--</div></div>
+    <div class="stat"><div class="k">Load level</div><div class="v" id="level">--</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <label for="preset">Query</label>
+      <select id="preset" onchange="pick()"><option value="">Choose a TPC-H-style query or type SQL below</option></select>
+      <label for="sql">SQL</label>
+      <textarea id="sql" spellcheck="false"></textarea>
+      <div class="row">
+        <div><label for="mode">Mode</label>
+          <select id="mode"><option value="adaptive">Adaptive (measured)</option><option value="rule">Rule (baseline)</option></select></div>
+        <div><label for="runs">Runs per side</label><input id="runs" type="number" min="1" max="15" value="5"></div>
+      </div>
+      <label>&nbsp;</label>
+      <button class="primary" id="go" onclick="run()">Compare with default PostgreSQL</button>
+    </div>
+
+    <div class="card" id="result"><div class="sub">Pick a query and press Compare. Both versions run alternately, and the medians are compared.</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b>What QuerySync has learned</b><button style="width:auto" onclick="loadPolicy()">Refresh</button>
+    </div>
+    <div class="table-wrap"><table id="policy"></table></div>
+  </div>
+</main>
+
+<div class="modal" id="report" onclick="if (event.target === this) closeReport()">
+  <div class="panel">
+    <div class="panel-head">
+      <b style="font-size:16px">Results &amp; charts</b>
+      <button style="width:auto" onclick="closeReport()">Close</button>
+    </div>
+    <div class="tabs">
+      <button id="tab-quick" class="active" onclick="showTab('quick')">Run quick benchmark (now)</button>
+      <button id="tab-full" onclick="showTab('full')">Last full benchmark</button>
+    </div>
+    <div id="pane-quick">
+      <div class="sub">Runs all 22 queries 5 times as default PostgreSQL and 5 times through QuerySync, interleaved,
+        at the <b>current</b> load (start CPU stress first to test under load). Takes about 1&ndash;3 minutes.</div>
+      <div class="row" style="margin-top:10px;max-width:420px">
+        <button class="primary" id="qb-go" onclick="startQuick()">Start quick benchmark</button>
+      </div>
+      <div id="qb-status"></div>
+      <div id="qb-result"></div>
+    </div>
+    <div id="pane-full" style="display:none"><div id="full-result" class="sub">Loading...</div></div>
+  </div>
+</div>
+
+<script>
+let queries = [];
+const $ = id => document.getElementById(id);
+
+async function telemetry() {
+  try {
+    const t = await (await fetch('/api/telemetry')).json();
+    $('cpu').textContent = t.cpu + '%'; $('ext').textContent = t.external_cpu + '%';
+    $('pg').textContent = t.postgres_cpu + '%'; $('mem').textContent = t.mem + '%';
+    $('level').textContent = t.level;
+    $('stress').classList.toggle('on', t.stress);
+    $('stress').textContent = t.stress ? 'Stop CPU stress' : 'Start CPU stress';
+  } catch (e) {}
+}
+
+async function toggleStress() { await fetch('/api/stress', {method: 'POST'}); telemetry(); }
+
+async function presets() {
+  queries = await (await fetch('/api/queries')).json();
+  for (const q of queries) $('preset').add(new Option(`${q.id}: ${q.title}`, q.id));
+}
+
+function pick() {
+  const q = queries.find(q => q.id === $('preset').value);
+  if (q) $('sql').value = q.sql;
+}
+
+function esc(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function run() {
+  const sql = $('sql').value.trim();
+  if (!sql) return;
+  const q = queries.find(q => q.sql === sql);
+  $('go').disabled = true; $('go').textContent = 'Running...';
+  try {
+    const res = await fetch('/api/execute', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sql, mode: $('mode').value, runs: +$('runs').value, label: q ? q.id : null})});
+    const d = await res.json();
+    if (!res.ok) { $('result').innerHTML = `<div class="verdict slower"><b>Error</b>${esc(d.error)}</div>`; return; }
+    show(d); loadPolicy();
+  } finally { $('go').disabled = false; $('go').textContent = 'Compare with default PostgreSQL'; }
+}
+
+function show(d) {
+  const titles = {
+    faster: `${(d.default_ms / d.optimized_ms).toFixed(2)}x faster (${d.change_pct}%)`,
+    slower: `Slower (${d.change_pct > 0 ? '+' : ''}${d.change_pct}%)`,
+    same: `No measurable difference (${d.change_pct > 0 ? '+' : ''}${d.change_pct}%)`,
+    default: 'Default plan kept',
+    learning: 'Learning: measuring both plans',
+  };
+  const max = Math.max(d.default_ms, d.optimized_ms);
+  const bar = (ms, color, name) =>
+    `<div class="sub">${name}</div><div class="bar" style="width:${Math.max(18, 100 * ms / max)}%;background:${color}">${ms} ms</div>`;
+  $('result').innerHTML = `
+    <div class="verdict ${d.verdict}"><b>${titles[d.verdict]}</b>${esc(d.reason)}</div>
+    ${bar(d.default_ms, '#30363d', 'Default PostgreSQL (median)')}
+    ${bar(d.optimized_ms, d.verdict === 'faster' ? '#238636' : '#1f6feb', 'QuerySync (median, incl. ' + d.overhead_ms + ' ms decision time)')}
+    <div class="mono">Load: ${d.load.level} (external CPU ${d.load.external_cpu}%) &middot; parallel plan: ${d.parallel_plan ? 'yes' : 'no'}</div>
+    <div class="mono">Default runs: ${d.default_runs.join(', ')}</div>
+    <div class="mono">QuerySync runs: ${d.optimized_runs.join(', ')}</div>
+    <div class="mono">Plans used: ${d.options.join(', ')}</div>`;
+}
+
+async function loadPolicy() {
+  const rows = await (await fetch('/api/policy')).json();
+  $('policy').innerHTML = '<tr><th>Query</th><th>Load</th><th>Choice</th><th>Default median</th><th>Serial median</th><th>Runs (d+s)</th><th>Why</th></tr>' +
+    rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.level}</td><td>${r.choice ?? '...'}</td>
+      <td>${r.default_ms ?? '-'}</td><td>${r.serial_ms ?? '-'}</td><td>${r.runs ?? '-'}</td><td>${esc(r.reason)}</td></tr>`).join('');
+}
+
+
+// ---------- Results & charts popup (plain SVG, no external libraries) ----------
+const COLORS = {default: '#6e7681', aa: '#8b949e', rule: '#d29922', adaptive: '#2f81f7',
+                win: '#3fb950', loss: '#f85149', same: '#6e7681'};
+const NAMES = {default: 'Default PostgreSQL', aa: 'A/A control', rule: 'Rule baseline', adaptive: 'QuerySync'};
+let pollTimer = null;
+
+function openReport() { $('report').classList.add('open'); showTab('quick'); }
+function closeReport() { $('report').classList.remove('open'); clearTimeout(pollTimer); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReport(); });
+
+function showTab(t) {
+  for (const x of ['quick', 'full']) {
+    $('pane-' + x).style.display = x === t ? '' : 'none';
+    $('tab-' + x).classList.toggle('active', x === t);
+  }
+  if (t === 'full') loadFull(); else pollQuick();
+}
+
+async function startQuick() {
+  $('qb-go').disabled = true;
+  $('qb-result').innerHTML = '';
+  const r = await fetch('/api/quickbench', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({rounds: 5})});
+  if (!r.ok && r.status !== 409) {
+    const d = await r.json();
+    $('qb-status').innerHTML = `<div class="verdict slower"><b>Error</b>${esc(d.error)}</div>`;
+  }
+  pollQuick();
+}
+
+async function pollQuick() {
+  clearTimeout(pollTimer);
+  const b = await (await fetch('/api/quickbench')).json();
+  $('qb-go').disabled = b.running;
+  if (b.running) {
+    const pct = b.total ? Math.round(100 * b.done / b.total) : 0;
+    $('qb-status').innerHTML = `<div class="progress"><div style="width:${pct}%"></div></div>
+      <div class="sub">Running... ${b.done} of ${b.total} query executions (${pct}%)</div>`;
+    pollTimer = setTimeout(pollQuick, 1000);
+    return;
+  }
+  $('qb-status').innerHTML = b.error ? `<div class="verdict slower"><b>Error</b>${esc(b.error)}</div>` : '';
+  if (b.result) {
+    const r = b.result;
+    $('qb-result').innerHTML = `<div class="sub" style="margin-top:10px">Finished ${r.finished_at} &middot;
+      load level <b>${r.load.level}</b> (median external CPU ${r.external_cpu_median}% during runs) &middot;
+      CPU stress ${r.stress ? 'on' : 'off'} &middot; ${r.rounds} runs per query and mode &middot;
+      win/loss = &gt;10% and p &lt; 0.05</div>` + renderLevel(r, ['default', 'adaptive']);
+  }
+}
+
+async function loadFull() {
+  const r = await fetch('/api/report');
+  const d = await r.json();
+  if (!r.ok) { $('full-result').innerHTML = `<div class="sub">${esc(d.error)}</div>`; return; }
+  let html = `<div class="sub">Generated ${esc(d.generated_at)} by <code>python main.py bench</code> &middot;
+    ${d.rounds} interleaved runs per query and mode &middot; win/loss = &gt;10% and p &lt; 0.05 &middot;
+    the A/A control (default vs itself) shows how much difference is just noise</div>`;
+  for (const [lvl, res] of Object.entries(d.levels)) {
+    html += `<h3 class="level">${lvl === 'stressed' ? 'Under CPU stress' : 'Normal load'}
+      <span class="sub">(median external CPU ${res.external_cpu_median}%)</span></h3>` + renderLevel(res, Object.keys(res.summary));
+  }
+  $('full-result').innerHTML = html;
+}
+
+function renderLevel(res, modes) {
+  const d = res.summary.default, a = res.summary.adaptive;
+  const change = (a.total_ms - d.total_ms) / d.total_ms * 100;
+  const serialQ = res.per_query.filter(r => r.modes.adaptive.serial_runs > 0).length;
+  const tiles = [
+    ['Total time, default PostgreSQL', d.total_ms.toFixed(0) + ' ms'],
+    ['Total time, QuerySync', a.total_ms.toFixed(0) + ' ms'],
+    ['Change in total time', (change > 0 ? '+' : '') + change.toFixed(1) + '%'],
+    ['Average speedup (geomean)', a.geomean_speedup.toFixed(2) + 'x'],
+    ['Significant wins / losses', `${a.wins} / ${a.losses}`],
+    ['Queries that used the serial plan', `${serialQ} of ${res.per_query.length}`],
+  ];
+  return `<div class="tiles">${tiles.map(([k, v]) =>
+      `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>`
+    + chartTotals(res.summary, modes)
+    + chartSpeedup(res.per_query, modes.filter(m => m !== 'default'))
+    + chartLatency(res.per_query);
+}
+
+function card(title, sub, svg, legend = '') {
+  return `<div class="chart"><h4>${title}</h4><div class="sub">${sub}</div>${svg}${legend}</div>`;
+}
+
+function legendHtml(items) {
+  return `<div class="legend">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div>`;
+}
+
+function chartTotals(summary, modes) {
+  const W = 900, row = 30, L = 150, H = modes.length * row + 10;
+  const max = Math.max(...modes.map(m => summary[m].total_ms));
+  let g = '';
+  modes.forEach((m, i) => {
+    const y = 5 + i * row, ms = summary[m].total_ms, w = (W - L - 90) * ms / max;
+    g += `<text x="${L - 8}" y="${y + 18}" text-anchor="end">${NAMES[m] || m}</text>
+      <rect x="${L}" y="${y + 4}" width="${w}" height="20" rx="3" fill="${COLORS[m] || '#888'}">
+        <title>${NAMES[m] || m}: ${ms} ms</title></rect>
+      <text x="${L + w + 6}" y="${y + 18}">${ms.toFixed(0)} ms</text>`;
+  });
+  return card('Total time for all 22 queries', 'Sum of per-query median latencies. Lower is better.',
+              `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`);
+}
+
+function chartSpeedup(rows, modes) {
+  const W = 900, H = 280, L = 48, R = 8, T = 10, B = 26, n = rows.length;
+  const gw = (W - L - R) / n, bw = Math.min(16, (gw - 6) / modes.length);
+  let maxL = 1;
+  rows.forEach(r => modes.forEach(m => { maxL = Math.max(maxL, Math.abs(Math.log2(r.modes[m].speedup))); }));
+  maxL = Math.ceil(maxL);
+  const y = v => T + (maxL - Math.log2(v)) / (2 * maxL) * (H - T - B);
+  let g = `<rect x="${L}" y="${y(1.1)}" width="${W - L - R}" height="${y(1 / 1.1) - y(1.1)}" fill="#fff" opacity="0.06"/>`;
+  for (let k = -maxL; k <= maxL; k++) {
+    const v = 2 ** k;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${k === 0 ? '#8b949e' : '#30363d'}"/>
+      <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v >= 1 ? v + 'x' : '1/' + (1 / v) + 'x'}</text>`;
+  }
+  const single = modes.length === 1;
+  rows.forEach((r, i) => {
+    const x0 = L + i * gw + (gw - modes.length * bw) / 2;
+    modes.forEach((m, j) => {
+      const d = r.modes[m], top = Math.min(y(d.speedup), y(1)), h = Math.max(1, Math.abs(y(d.speedup) - y(1)));
+      const color = single ? COLORS[d.outcome] : (COLORS[m] || '#888');
+      const op = !single && d.outcome === 'same' ? 0.45 : 1;
+      g += `<rect x="${x0 + j * bw}" y="${top}" width="${bw - 1}" height="${h}" fill="${color}" opacity="${op}">
+        <title>${r.id} ${NAMES[m] || m}: ${d.speedup.toFixed(2)}x (${r.modes.default.median_ms} ms -> ${d.median_ms} ms, p=${d.p}, ${d.outcome})</title></rect>`;
+    });
+    g += `<text x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle">${r.id}</text>`;
+  });
+  const legend = single
+    ? legendHtml([[COLORS.win, 'significantly faster'], [COLORS.same, 'no significant difference'],
+                  [COLORS.loss, 'significantly slower'], ['#2d333b', 'grey band = within 10%']])
+    : legendHtml([...modes.map(m => [COLORS[m] || '#888', NAMES[m] || m]),
+                  ['#2d333b', 'faded bar = not significant']]);
+  return card('Speedup per query vs default PostgreSQL',
+              'Above the line = faster, below = slower (log scale). Hover a bar for details.',
+              `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`, legend);
+}
+
+function chartLatency(rows) {
+  const W = 900, H = 260, L = 58, R = 8, T = 10, B = 26, n = rows.length;
+  const gw = (W - L - R) / n, bw = Math.min(16, (gw - 6) / 2);
+  const vals = rows.flatMap(r => [r.modes.default.median_ms, r.modes.adaptive.median_ms]);
+  const lo = Math.floor(Math.log10(Math.min(...vals))), hi = Math.ceil(Math.log10(Math.max(...vals)));
+  const y = v => T + (hi - Math.log10(v)) / (hi - lo) * (H - T - B);
+  let g = '';
+  for (let k = lo; k <= hi; k++) {
+    const v = 10 ** k;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#30363d"/>
+      <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v < 1 ? v.toFixed(-k) : v} ms</text>`;
+  }
+  rows.forEach((r, i) => {
+    const x0 = L + i * gw + (gw - 2 * bw) / 2;
+    [['default', COLORS.default], ['adaptive', COLORS.adaptive]].forEach(([m, c], j) => {
+      const v = r.modes[m].median_ms;
+      g += `<rect x="${x0 + j * bw}" y="${y(v)}" width="${bw - 1}" height="${H - B - y(v)}" fill="${c}">
+        <title>${r.id} ${NAMES[m]}: ${v} ms (runs: ${r.modes[m].runs_ms.join(', ')})</title></rect>`;
+    });
+    g += `<text x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle">${r.id}</text>`;
+  });
+  return card('Median latency per query', 'Log scale: fast and slow queries fit on one chart. Hover for every individual run.',
+              `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`,
+              legendHtml([[COLORS.default, 'Default PostgreSQL'], [COLORS.adaptive, 'QuerySync']]));
+}
+
+presets(); telemetry(); loadPolicy(); setInterval(telemetry, 1500);
+</script>
+</body>
+</html>

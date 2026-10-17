@@ -1,0 +1,2754 @@
+{
+ "generated_at": "2026-10-13 23:42:52",
+ "rounds": 5,
+ "levels": {
+  "normal": {
+   "external_cpu_median": 40.1,
+   "summary": {
+    "default": {
+     "geomean_speedup": 1.0,
+     "total_ms": 2229.6,
+     "wins": 0,
+     "losses": 0
+    },
+    "aa": {
+     "geomean_speedup": 0.93,
+     "total_ms": 2550.2,
+     "wins": 0,
+     "losses": 0
+    },
+    "rule": {
+     "geomean_speedup": 0.941,
+     "total_ms": 2461.9,
+     "wins": 0,
+     "losses": 0
+    },
+    "adaptive": {
+     "geomean_speedup": 1.173,
+     "total_ms": 1666.9,
+     "wins": 2,
+     "losses": 1
+    }
+   },
+   "per_query": [
+    {
+     "id": "Q01",
+     "modes": {
+      "default": {
+       "median_ms": 283.37,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        201.22,
+        359.3,
+        283.37,
+        371.02,
+        220.91
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 344.06,
+       "speedup": 0.824,
+       "p": 0.3175,
+       "outcome": "same",
+       "runs_ms": [
+        203.46,
+        503.89,
+        299.37,
+        344.06,
+        508.75
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 409.63,
+       "speedup": 0.692,
+       "p": 0.2063,
+       "outcome": "same",
+       "runs_ms": [
+        213.77,
+        409.63,
+        317.16,
+        492.05,
+        443.85
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 343.07,
+       "speedup": 0.826,
+       "p": 0.3413,
+       "outcome": "same",
+       "runs_ms": [
+        209.23,
+        408.87,
+        343.07,
+        406.96,
+        327.25
+       ],
+       "serial_runs": 1
+      }
+     }
+    },
+    {
+     "id": "Q02",
+     "modes": {
+      "default": {
+       "median_ms": 3.84,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        1.6,
+        4.94,
+        3.84,
+        3.83,
+        4.22
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 4.46,
+       "speedup": 0.861,
+       "p": 0.6032,
+       "outcome": "same",
+       "runs_ms": [
+        1.93,
+        4.55,
+        4.64,
+        3.93,
+        4.46
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 3.77,
+       "speedup": 1.019,
+       "p": 0.8095,
+       "outcome": "same",
+       "runs_ms": [
+        1.63,
+        4.8,
+        3.77,
+        3.65,
+        3.99
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 4.36,
+       "speedup": 0.881,
+       "p": 0.5159,
+       "outcome": "same",
+       "runs_ms": [
+        1.63,
+        4.36,
+        5.25,
+        5.29,
+        4.31
+       ],
+       "serial_runs": 1
+      }
+     }
+    },
+    {
+     "id": "Q03",
+     "modes": {
+      "default": {
+       "median_ms": 65.58,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        46.97,
+        98.35,
+        65.58,
+        56.77,
+        101.63
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 63.88,
+       "speedup": 1.027,
+       "p": 0.7619,
+       "outcome": "same",
+       "runs_ms": [
+        58.07,
+        63.88,
+        56.0,
+        82.23,
+        170.79
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 66.65,
+       "speedup": 0.984,
+       "p": 0.746,
+       "outcome": "same",
+       "runs_ms": [
+        41.4,
+        98.26,
+        66.38,
+        66.65,
+        144.63
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 66.68,
+       "speedup": 0.984,
+       "p": 0.9762,
+       "outcome": "same",
+       "runs_ms": [
+        40.11,
+        66.68,
+        64.67,
+        74.57,
+        131.78
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q04",
+     "modes": {
+      "default": {
+       "median_ms": 47.47,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        29.32,
+        47.47,
+        50.47,
+        74.0,
+        38.21
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 52.91,
+       "speedup": 0.897,
+       "p": 0.6508,
+       "outcome": "same",
+       "runs_ms": [
+        28.8,
+        47.22,
+        80.87,
+        56.69,
+        52.91
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 42.76,
+       "speedup": 1.11,
+       "p": 0.8254,
+       "outcome": "same",
+       "runs_ms": [
+        30.45,
+        42.76,
+        42.18,
+        77.05,
+        63.12
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 43.09,
+       "speedup": 1.102,
+       "p": 0.7937,
+       "outcome": "same",
+       "runs_ms": [
+        29.9,
+        58.32,
+        41.83,
+        84.69,
+        43.09
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q05",
+     "modes": {
+      "default": {
+       "median_ms": 34.74,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        34.74,
+        29.7,
+        61.42,
+        67.22,
+        34.1
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 45.57,
+       "speedup": 0.762,
+       "p": 0.6587,
+       "outcome": "same",
+       "runs_ms": [
+        45.57,
+        34.28,
+        46.6,
+        100.08,
+        35.18
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 46.6,
+       "speedup": 0.745,
+       "p": 0.9286,
+       "outcome": "same",
+       "runs_ms": [
+        20.56,
+        29.38,
+        57.82,
+        77.11,
+        46.6
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 43.61,
+       "speedup": 0.797,
+       "p": 0.5,
+       "outcome": "same",
+       "runs_ms": [
+        31.0,
+        43.61,
+        73.8,
+        94.44,
+        38.68
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q06",
+     "modes": {
+      "default": {
+       "median_ms": 152.58,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        120.79,
+        152.58,
+        166.01,
+        245.96,
+        149.02
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 167.25,
+       "speedup": 0.912,
+       "p": 0.7857,
+       "outcome": "same",
+       "runs_ms": [
+        148.62,
+        167.25,
+        173.57,
+        228.35,
+        138.19
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 168.89,
+       "speedup": 0.903,
+       "p": 0.6746,
+       "outcome": "same",
+       "runs_ms": [
+        117.02,
+        245.55,
+        164.96,
+        168.89,
+        195.88
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 77.24,
+       "speedup": 1.975,
+       "p": 0.2937,
+       "outcome": "same",
+       "runs_ms": [
+        36.1,
+        152.35,
+        73.75,
+        341.91,
+        77.24
+       ],
+       "serial_runs": 4
+      }
+     }
+    },
+    {
+     "id": "Q07",
+     "modes": {
+      "default": {
+       "median_ms": 55.06,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        43.0,
+        55.06,
+        71.11,
+        70.81,
+        30.9
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 49.26,
+       "speedup": 1.118,
+       "p": 0.8968,
+       "outcome": "same",
+       "runs_ms": [
+        37.31,
+        149.37,
+        49.26,
+        61.02,
+        29.69
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 46.0,
+       "speedup": 1.197,
+       "p": 0.6508,
+       "outcome": "same",
+       "runs_ms": [
+        40.96,
+        109.38,
+        46.0,
+        94.05,
+        36.42
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 43.75,
+       "speedup": 1.259,
+       "p": 0.8254,
+       "outcome": "same",
+       "runs_ms": [
+        40.15,
+        135.51,
+        43.75,
+        73.58,
+        29.5
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q08",
+     "modes": {
+      "default": {
+       "median_ms": 4.47,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        2.38,
+        4.47,
+        5.22,
+        6.21,
+        2.55
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 5.4,
+       "speedup": 0.828,
+       "p": 0.3968,
+       "outcome": "same",
+       "runs_ms": [
+        3.71,
+        6.48,
+        10.16,
+        5.4,
+        2.57
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 5.58,
+       "speedup": 0.801,
+       "p": 0.3571,
+       "outcome": "same",
+       "runs_ms": [
+        2.4,
+        5.58,
+        5.66,
+        7.06,
+        5.21
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 5.5,
+       "speedup": 0.813,
+       "p": 0.6032,
+       "outcome": "same",
+       "runs_ms": [
+        2.62,
+        6.09,
+        5.51,
+        5.5,
+        2.98
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q09",
+     "modes": {
+      "default": {
+       "median_ms": 6.34,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        3.34,
+        6.34,
+        7.26,
+        7.04,
+        5.12
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 6.27,
+       "speedup": 1.011,
+       "p": 0.8333,
+       "outcome": "same",
+       "runs_ms": [
+        3.74,
+        6.57,
+        6.65,
+        6.27,
+        4.49
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 5.79,
+       "speedup": 1.095,
+       "p": 0.6032,
+       "outcome": "same",
+       "runs_ms": [
+        4.48,
+        6.77,
+        5.79,
+        6.22,
+        2.98
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 5.74,
+       "speedup": 1.105,
+       "p": 0.5873,
+       "outcome": "same",
+       "runs_ms": [
+        4.27,
+        6.65,
+        5.74,
+        6.34,
+        2.91
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q10",
+     "modes": {
+      "default": {
+       "median_ms": 53.18,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        27.92,
+        55.63,
+        66.51,
+        53.18,
+        24.48
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 51.86,
+       "speedup": 1.025,
+       "p": 0.754,
+       "outcome": "same",
+       "runs_ms": [
+        27.59,
+        71.57,
+        57.69,
+        51.86,
+        29.39
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 52.26,
+       "speedup": 1.018,
+       "p": 0.7302,
+       "outcome": "same",
+       "runs_ms": [
+        26.04,
+        69.3,
+        61.67,
+        52.26,
+        31.77
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 57.33,
+       "speedup": 0.928,
+       "p": 0.3254,
+       "outcome": "same",
+       "runs_ms": [
+        33.26,
+        115.56,
+        123.08,
+        57.33,
+        27.17
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q11",
+     "modes": {
+      "default": {
+       "median_ms": 316.8,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        274.19,
+        326.87,
+        316.8,
+        374.21,
+        278.82
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 321.69,
+       "speedup": 0.985,
+       "p": 0.3968,
+       "outcome": "same",
+       "runs_ms": [
+        279.0,
+        321.69,
+        519.73,
+        387.66,
+        284.14
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 278.14,
+       "speedup": 1.139,
+       "p": 0.2143,
+       "outcome": "same",
+       "runs_ms": [
+        291.27,
+        107.94,
+        363.34,
+        88.47,
+        278.14
+       ],
+       "serial_runs": 2
+      },
+      "adaptive": {
+       "median_ms": 113.4,
+       "speedup": 2.794,
+       "p": 0.0397,
+       "outcome": "win",
+       "runs_ms": [
+        95.92,
+        352.94,
+        113.4,
+        91.5,
+        121.6
+       ],
+       "serial_runs": 4
+      }
+     }
+    },
+    {
+     "id": "Q12",
+     "modes": {
+      "default": {
+       "median_ms": 0.38,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.35,
+        0.39,
+        0.38,
+        0.42,
+        0.33
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.49,
+       "speedup": 0.776,
+       "p": 0.0794,
+       "outcome": "same",
+       "runs_ms": [
+        0.35,
+        0.5,
+        0.41,
+        0.54,
+        0.49
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.43,
+       "speedup": 0.884,
+       "p": 0.1032,
+       "outcome": "same",
+       "runs_ms": [
+        0.39,
+        0.36,
+        0.7,
+        0.6,
+        0.43
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.43,
+       "speedup": 0.884,
+       "p": 0.0476,
+       "outcome": "loss",
+       "runs_ms": [
+        0.59,
+        0.43,
+        0.54,
+        0.43,
+        0.38
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q13",
+     "modes": {
+      "default": {
+       "median_ms": 40.71,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        38.86,
+        57.21,
+        40.71,
+        51.81,
+        38.86
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 43.44,
+       "speedup": 0.937,
+       "p": 0.5794,
+       "outcome": "same",
+       "runs_ms": [
+        43.44,
+        48.57,
+        36.74,
+        46.97,
+        37.53
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 49.79,
+       "speedup": 0.818,
+       "p": 0.4524,
+       "outcome": "same",
+       "runs_ms": [
+        38.52,
+        49.79,
+        43.25,
+        53.28,
+        84.8
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 45.96,
+       "speedup": 0.886,
+       "p": 0.7698,
+       "outcome": "same",
+       "runs_ms": [
+        49.27,
+        46.65,
+        36.04,
+        45.96,
+        41.07
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q14",
+     "modes": {
+      "default": {
+       "median_ms": 153.25,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        134.76,
+        157.24,
+        137.41,
+        168.17,
+        153.25
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 161.05,
+       "speedup": 0.952,
+       "p": 0.4603,
+       "outcome": "same",
+       "runs_ms": [
+        127.29,
+        161.05,
+        158.18,
+        164.24,
+        230.22
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 138.38,
+       "speedup": 1.107,
+       "p": 0.9127,
+       "outcome": "same",
+       "runs_ms": [
+        138.38,
+        161.28,
+        131.98,
+        57.75,
+        404.84
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 44.45,
+       "speedup": 3.448,
+       "p": 0.0476,
+       "outcome": "win",
+       "runs_ms": [
+        44.45,
+        186.22,
+        37.08,
+        49.07,
+        40.02
+       ],
+       "serial_runs": 4
+      }
+     }
+    },
+    {
+     "id": "Q15",
+     "modes": {
+      "default": {
+       "median_ms": 353.54,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        298.26,
+        353.54,
+        457.98,
+        351.91,
+        367.27
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 403.46,
+       "speedup": 0.876,
+       "p": 0.754,
+       "outcome": "same",
+       "runs_ms": [
+        264.96,
+        456.44,
+        403.46,
+        445.68,
+        353.85
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 362.41,
+       "speedup": 0.976,
+       "p": 0.8889,
+       "outcome": "same",
+       "runs_ms": [
+        358.39,
+        370.84,
+        409.62,
+        293.41,
+        362.41
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 169.57,
+       "speedup": 2.085,
+       "p": 0.2302,
+       "outcome": "same",
+       "runs_ms": [
+        156.69,
+        170.2,
+        169.57,
+        825.71,
+        153.97
+       ],
+       "serial_runs": 4
+      }
+     }
+    },
+    {
+     "id": "Q16",
+     "modes": {
+      "default": {
+       "median_ms": 0.74,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.63,
+        0.82,
+        0.76,
+        0.7,
+        0.74
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.71,
+       "speedup": 1.042,
+       "p": 0.6984,
+       "outcome": "same",
+       "runs_ms": [
+        0.48,
+        0.7,
+        0.76,
+        0.85,
+        0.71
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.75,
+       "speedup": 0.987,
+       "p": 0.9048,
+       "outcome": "same",
+       "runs_ms": [
+        0.33,
+        0.68,
+        0.75,
+        1.52,
+        0.88
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.78,
+       "speedup": 0.949,
+       "p": 0.6349,
+       "outcome": "same",
+       "runs_ms": [
+        0.37,
+        0.78,
+        0.74,
+        1.68,
+        0.83
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q17",
+     "modes": {
+      "default": {
+       "median_ms": 0.6,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.32,
+        0.89,
+        0.6,
+        0.55,
+        0.7
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.7,
+       "speedup": 0.857,
+       "p": 0.9841,
+       "outcome": "same",
+       "runs_ms": [
+        0.29,
+        0.77,
+        0.7,
+        0.58,
+        0.71
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.63,
+       "speedup": 0.952,
+       "p": 0.7619,
+       "outcome": "same",
+       "runs_ms": [
+        0.31,
+        0.74,
+        0.56,
+        0.63,
+        1.29
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.86,
+       "speedup": 0.698,
+       "p": 0.3571,
+       "outcome": "same",
+       "runs_ms": [
+        0.31,
+        0.97,
+        0.86,
+        0.65,
+        5.19
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q18",
+     "modes": {
+      "default": {
+       "median_ms": 489.15,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        433.05,
+        567.91,
+        894.2,
+        433.45,
+        489.15
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 663.81,
+       "speedup": 0.737,
+       "p": 0.254,
+       "outcome": "same",
+       "runs_ms": [
+        663.81,
+        556.21,
+        809.97,
+        517.55,
+        771.48
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 628.76,
+       "speedup": 0.778,
+       "p": 0.2937,
+       "outcome": "same",
+       "runs_ms": [
+        1054.63,
+        628.76,
+        822.76,
+        468.86,
+        547.62
+       ],
+       "serial_runs": 2
+      },
+      "adaptive": {
+       "median_ms": 545.29,
+       "speedup": 0.897,
+       "p": 0.6984,
+       "outcome": "same",
+       "runs_ms": [
+        350.65,
+        795.17,
+        648.38,
+        295.49,
+        545.29
+       ],
+       "serial_runs": 3
+      }
+     }
+    },
+    {
+     "id": "Q19",
+     "modes": {
+      "default": {
+       "median_ms": 0.84,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        2.01,
+        0.84,
+        0.72,
+        0.39,
+        0.92
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.7,
+       "speedup": 1.2,
+       "p": 0.5794,
+       "outcome": "same",
+       "runs_ms": [
+        1.05,
+        0.7,
+        0.6,
+        0.46,
+        0.89
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.83,
+       "speedup": 1.012,
+       "p": 0.7698,
+       "outcome": "same",
+       "runs_ms": [
+        1.25,
+        0.74,
+        0.83,
+        0.36,
+        0.91
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.77,
+       "speedup": 1.091,
+       "p": 0.7937,
+       "outcome": "same",
+       "runs_ms": [
+        1.23,
+        0.75,
+        0.84,
+        0.45,
+        0.77
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q20",
+     "modes": {
+      "default": {
+       "median_ms": 3.68,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        7.78,
+        4.24,
+        3.68,
+        1.44,
+        1.93
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 3.49,
+       "speedup": 1.054,
+       "p": 0.7937,
+       "outcome": "same",
+       "runs_ms": [
+        7.52,
+        3.81,
+        3.49,
+        1.56,
+        1.57
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 3.56,
+       "speedup": 1.034,
+       "p": 0.746,
+       "outcome": "same",
+       "runs_ms": [
+        6.31,
+        3.63,
+        3.56,
+        1.55,
+        1.52
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 3.49,
+       "speedup": 1.054,
+       "p": 0.8889,
+       "outcome": "same",
+       "runs_ms": [
+        5.92,
+        3.49,
+        4.72,
+        1.61,
+        1.72
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q21",
+     "modes": {
+      "default": {
+       "median_ms": 162.76,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        441.96,
+        146.32,
+        192.36,
+        162.76,
+        152.33
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 159.18,
+       "speedup": 1.022,
+       "p": 0.873,
+       "outcome": "same",
+       "runs_ms": [
+        425.79,
+        157.41,
+        197.23,
+        156.05,
+        159.18
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 149.52,
+       "speedup": 1.089,
+       "p": 0.619,
+       "outcome": "same",
+       "runs_ms": [
+        522.24,
+        149.52,
+        76.67,
+        134.11,
+        157.33
+       ],
+       "serial_runs": 1
+      },
+      "adaptive": {
+       "median_ms": 50.88,
+       "speedup": 3.199,
+       "p": 0.0873,
+       "outcome": "same",
+       "runs_ms": [
+        262.81,
+        50.88,
+        39.42,
+        132.45,
+        33.5
+       ],
+       "serial_runs": 3
+      }
+     }
+    },
+    {
+     "id": "Q22",
+     "modes": {
+      "default": {
+       "median_ms": 0.49,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        1.1,
+        0.47,
+        0.49,
+        0.35,
+        0.73
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.54,
+       "speedup": 0.907,
+       "p": 0.8651,
+       "outcome": "same",
+       "runs_ms": [
+        0.98,
+        0.54,
+        0.53,
+        0.68,
+        0.42
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.77,
+       "speedup": 0.636,
+       "p": 0.2381,
+       "outcome": "same",
+       "runs_ms": [
+        1.02,
+        0.54,
+        0.54,
+        0.77,
+        1.46
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.66,
+       "speedup": 0.742,
+       "p": 0.8333,
+       "outcome": "same",
+       "runs_ms": [
+        1.03,
+        0.45,
+        0.66,
+        0.41,
+        0.67
+       ],
+       "serial_runs": 0
+      }
+     }
+    }
+   ],
+   "learning_runs": 48
+  },
+  "stressed": {
+   "external_cpu_median": 63.2,
+   "summary": {
+    "default": {
+     "geomean_speedup": 1.0,
+     "total_ms": 3647.3,
+     "wins": 0,
+     "losses": 0
+    },
+    "aa": {
+     "geomean_speedup": 0.981,
+     "total_ms": 3621.4,
+     "wins": 0,
+     "losses": 0
+    },
+    "rule": {
+     "geomean_speedup": 1.239,
+     "total_ms": 2558.2,
+     "wins": 5,
+     "losses": 1
+    },
+    "adaptive": {
+     "geomean_speedup": 1.223,
+     "total_ms": 2412.3,
+     "wins": 5,
+     "losses": 0
+    }
+   },
+   "per_query": [
+    {
+     "id": "Q01",
+     "modes": {
+      "default": {
+       "median_ms": 409.28,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        407.39,
+        452.83,
+        367.63,
+        409.28,
+        685.75
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 468.22,
+       "speedup": 0.874,
+       "p": 0.4524,
+       "outcome": "same",
+       "runs_ms": [
+        468.22,
+        623.15,
+        369.12,
+        426.63,
+        929.38
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 700.41,
+       "speedup": 0.584,
+       "p": 0.0159,
+       "outcome": "loss",
+       "runs_ms": [
+        700.41,
+        695.62,
+        526.28,
+        728.56,
+        894.8
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 393.4,
+       "speedup": 1.04,
+       "p": 0.8333,
+       "outcome": "same",
+       "runs_ms": [
+        364.16,
+        560.91,
+        393.4,
+        375.2,
+        524.56
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q02",
+     "modes": {
+      "default": {
+       "median_ms": 3.84,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        3.58,
+        3.84,
+        4.09,
+        3.28,
+        4.08
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 4.34,
+       "speedup": 0.885,
+       "p": 0.3333,
+       "outcome": "same",
+       "runs_ms": [
+        6.29,
+        4.34,
+        3.63,
+        3.07,
+        4.99
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 3.41,
+       "speedup": 1.126,
+       "p": 0.2937,
+       "outcome": "same",
+       "runs_ms": [
+        3.11,
+        3.41,
+        3.98,
+        3.19,
+        3.89
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 4.04,
+       "speedup": 0.95,
+       "p": 0.3333,
+       "outcome": "same",
+       "runs_ms": [
+        3.66,
+        4.06,
+        4.04,
+        4.63,
+        3.75
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q03",
+     "modes": {
+      "default": {
+       "median_ms": 96.12,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        96.12,
+        97.18,
+        80.81,
+        89.97,
+        106.68
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 85.84,
+       "speedup": 1.12,
+       "p": 0.3175,
+       "outcome": "same",
+       "runs_ms": [
+        83.28,
+        87.64,
+        82.56,
+        85.84,
+        101.72
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 118.83,
+       "speedup": 0.809,
+       "p": 0.1429,
+       "outcome": "same",
+       "runs_ms": [
+        91.36,
+        124.58,
+        169.42,
+        86.37,
+        118.83
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 100.21,
+       "speedup": 0.959,
+       "p": 0.6349,
+       "outcome": "same",
+       "runs_ms": [
+        102.14,
+        100.21,
+        81.46,
+        84.72,
+        156.0
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q04",
+     "modes": {
+      "default": {
+       "median_ms": 85.62,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        80.29,
+        86.95,
+        108.53,
+        63.54,
+        85.62
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 88.75,
+       "speedup": 0.965,
+       "p": 0.5873,
+       "outcome": "same",
+       "runs_ms": [
+        88.75,
+        73.31,
+        70.54,
+        102.8,
+        130.16
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 72.82,
+       "speedup": 1.176,
+       "p": 0.381,
+       "outcome": "same",
+       "runs_ms": [
+        72.82,
+        67.8,
+        87.63,
+        84.74,
+        70.98
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 77.69,
+       "speedup": 1.102,
+       "p": 0.8651,
+       "outcome": "same",
+       "runs_ms": [
+        88.27,
+        77.69,
+        113.89,
+        66.85,
+        69.89
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q05",
+     "modes": {
+      "default": {
+       "median_ms": 45.25,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        66.61,
+        42.01,
+        41.82,
+        45.25,
+        63.53
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 49.32,
+       "speedup": 0.917,
+       "p": 0.8571,
+       "outcome": "same",
+       "runs_ms": [
+        65.44,
+        39.98,
+        49.32,
+        44.63,
+        51.59
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 46.64,
+       "speedup": 0.97,
+       "p": 0.4921,
+       "outcome": "same",
+       "runs_ms": [
+        46.57,
+        39.79,
+        52.61,
+        46.64,
+        51.07
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 46.73,
+       "speedup": 0.968,
+       "p": 0.619,
+       "outcome": "same",
+       "runs_ms": [
+        46.73,
+        40.32,
+        57.27,
+        53.45,
+        43.27
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q06",
+     "modes": {
+      "default": {
+       "median_ms": 291.79,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        267.95,
+        199.25,
+        429.74,
+        291.79,
+        551.65
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 256.81,
+       "speedup": 1.136,
+       "p": 0.5635,
+       "outcome": "same",
+       "runs_ms": [
+        261.49,
+        193.79,
+        535.44,
+        256.81,
+        250.47
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 93.68,
+       "speedup": 3.115,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        93.68,
+        82.32,
+        90.54,
+        98.94,
+        123.83
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 116.55,
+       "speedup": 2.504,
+       "p": 0.0159,
+       "outcome": "win",
+       "runs_ms": [
+        95.9,
+        90.27,
+        218.8,
+        116.55,
+        120.56
+       ],
+       "serial_runs": 5
+      }
+     }
+    },
+    {
+     "id": "Q07",
+     "modes": {
+      "default": {
+       "median_ms": 53.9,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        52.55,
+        51.8,
+        53.9,
+        61.59,
+        63.59
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 64.29,
+       "speedup": 0.838,
+       "p": 0.2381,
+       "outcome": "same",
+       "runs_ms": [
+        55.73,
+        49.25,
+        64.29,
+        115.29,
+        159.61
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 57.55,
+       "speedup": 0.937,
+       "p": 0.3651,
+       "outcome": "same",
+       "runs_ms": [
+        100.23,
+        51.4,
+        57.55,
+        51.64,
+        137.37
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 63.59,
+       "speedup": 0.848,
+       "p": 0.2143,
+       "outcome": "same",
+       "runs_ms": [
+        63.59,
+        49.36,
+        87.54,
+        58.47,
+        151.64
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q08",
+     "modes": {
+      "default": {
+       "median_ms": 4.83,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        4.1,
+        4.83,
+        5.03,
+        5.64,
+        4.5
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 4.51,
+       "speedup": 1.071,
+       "p": 0.5714,
+       "outcome": "same",
+       "runs_ms": [
+        4.51,
+        4.49,
+        5.23,
+        4.24,
+        4.65
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 5.13,
+       "speedup": 0.942,
+       "p": 0.3333,
+       "outcome": "same",
+       "runs_ms": [
+        6.97,
+        5.13,
+        4.42,
+        4.28,
+        6.53
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 4.68,
+       "speedup": 1.032,
+       "p": 0.4762,
+       "outcome": "same",
+       "runs_ms": [
+        4.63,
+        4.18,
+        4.68,
+        4.8,
+        4.68
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q09",
+     "modes": {
+      "default": {
+       "median_ms": 5.5,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        5.5,
+        5.18,
+        5.86,
+        5.03,
+        7.03
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 5.23,
+       "speedup": 1.052,
+       "p": 0.7222,
+       "outcome": "same",
+       "runs_ms": [
+        5.07,
+        5.49,
+        5.0,
+        7.13,
+        5.23
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 5.59,
+       "speedup": 0.984,
+       "p": 0.7619,
+       "outcome": "same",
+       "runs_ms": [
+        5.68,
+        6.17,
+        5.11,
+        5.59,
+        5.23
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 5.5,
+       "speedup": 1.0,
+       "p": 0.619,
+       "outcome": "same",
+       "runs_ms": [
+        5.47,
+        5.5,
+        6.68,
+        5.48,
+        6.56
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q10",
+     "modes": {
+      "default": {
+       "median_ms": 47.95,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        44.95,
+        43.83,
+        97.21,
+        47.95,
+        230.71
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 52.15,
+       "speedup": 0.919,
+       "p": 0.619,
+       "outcome": "same",
+       "runs_ms": [
+        46.73,
+        48.14,
+        82.11,
+        81.34,
+        52.15
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 51.09,
+       "speedup": 0.939,
+       "p": 0.4365,
+       "outcome": "same",
+       "runs_ms": [
+        51.09,
+        46.56,
+        51.25,
+        48.96,
+        60.48
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 51.47,
+       "speedup": 0.932,
+       "p": 0.7381,
+       "outcome": "same",
+       "runs_ms": [
+        51.47,
+        41.88,
+        45.56,
+        91.0,
+        108.58
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q11",
+     "modes": {
+      "default": {
+       "median_ms": 554.94,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        554.94,
+        409.56,
+        525.71,
+        880.63,
+        920.77
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 609.04,
+       "speedup": 0.911,
+       "p": 0.6429,
+       "outcome": "same",
+       "runs_ms": [
+        606.75,
+        416.22,
+        665.31,
+        631.82,
+        609.04
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 220.77,
+       "speedup": 2.514,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        220.77,
+        172.67,
+        263.64,
+        194.09,
+        231.56
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 222.18,
+       "speedup": 2.498,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        251.31,
+        165.88,
+        226.73,
+        185.69,
+        222.18
+       ],
+       "serial_runs": 5
+      }
+     }
+    },
+    {
+     "id": "Q12",
+     "modes": {
+      "default": {
+       "median_ms": 0.66,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.44,
+        0.7,
+        0.72,
+        0.66,
+        0.47
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.57,
+       "speedup": 1.158,
+       "p": 0.8175,
+       "outcome": "same",
+       "runs_ms": [
+        0.49,
+        0.57,
+        0.63,
+        0.98,
+        0.49
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.57,
+       "speedup": 1.158,
+       "p": 0.7222,
+       "outcome": "same",
+       "runs_ms": [
+        0.45,
+        0.54,
+        0.68,
+        0.59,
+        0.57
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.79,
+       "speedup": 0.835,
+       "p": 0.1429,
+       "outcome": "same",
+       "runs_ms": [
+        0.79,
+        0.52,
+        0.91,
+        1.08,
+        0.65
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q13",
+     "modes": {
+      "default": {
+       "median_ms": 104.24,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        89.17,
+        120.96,
+        104.24,
+        96.75,
+        117.69
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 90.74,
+       "speedup": 1.149,
+       "p": 0.1032,
+       "outcome": "same",
+       "runs_ms": [
+        78.73,
+        82.52,
+        98.54,
+        90.74,
+        103.88
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 100.41,
+       "speedup": 1.038,
+       "p": 0.5238,
+       "outcome": "same",
+       "runs_ms": [
+        100.41,
+        92.23,
+        118.3,
+        101.22,
+        88.5
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 86.22,
+       "speedup": 1.209,
+       "p": 0.2063,
+       "outcome": "same",
+       "runs_ms": [
+        74.07,
+        71.65,
+        111.14,
+        86.22,
+        115.85
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q14",
+     "modes": {
+      "default": {
+       "median_ms": 285.17,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        285.17,
+        220.43,
+        369.56,
+        347.02,
+        264.11
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 253.59,
+       "speedup": 1.125,
+       "p": 0.8492,
+       "outcome": "same",
+       "runs_ms": [
+        269.63,
+        191.78,
+        522.22,
+        251.99,
+        253.59
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 84.58,
+       "speedup": 3.372,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        84.58,
+        78.42,
+        122.73,
+        85.38,
+        84.54
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 88.26,
+       "speedup": 3.231,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        88.26,
+        77.26,
+        104.44,
+        96.57,
+        80.31
+       ],
+       "serial_runs": 5
+      }
+     }
+    },
+    {
+     "id": "Q15",
+     "modes": {
+      "default": {
+       "median_ms": 444.92,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        360.94,
+        437.05,
+        517.79,
+        444.92,
+        934.71
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 573.42,
+       "speedup": 0.776,
+       "p": 0.7937,
+       "outcome": "same",
+       "runs_ms": [
+        421.37,
+        370.25,
+        859.31,
+        573.42,
+        580.57
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 183.89,
+       "speedup": 2.419,
+       "p": 0.0397,
+       "outcome": "win",
+       "runs_ms": [
+        170.34,
+        159.78,
+        554.73,
+        183.89,
+        254.76
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 176.62,
+       "speedup": 2.519,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        171.77,
+        167.18,
+        216.14,
+        184.8,
+        176.62
+       ],
+       "serial_runs": 5
+      }
+     }
+    },
+    {
+     "id": "Q16",
+     "modes": {
+      "default": {
+       "median_ms": 0.66,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.52,
+        0.53,
+        0.73,
+        0.78,
+        0.66
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.69,
+       "speedup": 0.957,
+       "p": 0.2143,
+       "outcome": "same",
+       "runs_ms": [
+        0.61,
+        1.41,
+        0.69,
+        5.58,
+        0.61
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.72,
+       "speedup": 0.917,
+       "p": 0.7937,
+       "outcome": "same",
+       "runs_ms": [
+        0.46,
+        0.81,
+        0.56,
+        0.82,
+        0.72
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.73,
+       "speedup": 0.904,
+       "p": 0.3333,
+       "outcome": "same",
+       "runs_ms": [
+        0.43,
+        1.21,
+        0.73,
+        1.02,
+        0.73
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q17",
+     "modes": {
+      "default": {
+       "median_ms": 0.46,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.41,
+        0.43,
+        0.56,
+        0.46,
+        0.51
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.57,
+       "speedup": 0.807,
+       "p": 0.2619,
+       "outcome": "same",
+       "runs_ms": [
+        0.98,
+        0.44,
+        0.42,
+        0.57,
+        0.6
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.5,
+       "speedup": 0.92,
+       "p": 0.5556,
+       "outcome": "same",
+       "runs_ms": [
+        1.16,
+        0.5,
+        0.39,
+        0.46,
+        0.53
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.58,
+       "speedup": 0.793,
+       "p": 0.2619,
+       "outcome": "same",
+       "runs_ms": [
+        0.65,
+        0.64,
+        0.4,
+        0.58,
+        0.47
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q18",
+     "modes": {
+      "default": {
+       "median_ms": 972.76,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        972.76,
+        786.7,
+        748.32,
+        1239.14,
+        1024.01
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 735.29,
+       "speedup": 1.323,
+       "p": 0.3333,
+       "outcome": "same",
+       "runs_ms": [
+        673.81,
+        735.29,
+        683.68,
+        1195.58,
+        866.96
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 725.48,
+       "speedup": 1.341,
+       "p": 0.1508,
+       "outcome": "same",
+       "runs_ms": [
+        725.48,
+        566.68,
+        647.54,
+        1091.65,
+        768.11
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 892.62,
+       "speedup": 1.09,
+       "p": 0.2698,
+       "outcome": "same",
+       "runs_ms": [
+        892.62,
+        624.46,
+        715.81,
+        898.07,
+        970.46
+       ],
+       "serial_runs": 3
+      }
+     }
+    },
+    {
+     "id": "Q19",
+     "modes": {
+      "default": {
+       "median_ms": 0.55,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.62,
+        0.52,
+        0.54,
+        0.55,
+        1.04
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.61,
+       "speedup": 0.902,
+       "p": 0.6508,
+       "outcome": "same",
+       "runs_ms": [
+        0.68,
+        0.5,
+        0.69,
+        0.45,
+        0.61
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.64,
+       "speedup": 0.859,
+       "p": 0.5159,
+       "outcome": "same",
+       "runs_ms": [
+        0.64,
+        0.62,
+        0.64,
+        0.53,
+        1.43
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.64,
+       "speedup": 0.859,
+       "p": 0.8651,
+       "outcome": "same",
+       "runs_ms": [
+        1.14,
+        0.64,
+        0.52,
+        0.45,
+        0.67
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q20",
+     "modes": {
+      "default": {
+       "median_ms": 3.17,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        3.17,
+        3.2,
+        2.82,
+        2.87,
+        3.59
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 3.15,
+       "speedup": 1.006,
+       "p": 0.3889,
+       "outcome": "same",
+       "runs_ms": [
+        3.69,
+        3.15,
+        5.07,
+        2.98,
+        2.93
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 3.01,
+       "speedup": 1.053,
+       "p": 0.7302,
+       "outcome": "same",
+       "runs_ms": [
+        3.28,
+        2.95,
+        3.01,
+        3.11,
+        2.96
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 3.45,
+       "speedup": 0.919,
+       "p": 0.2619,
+       "outcome": "same",
+       "runs_ms": [
+        3.58,
+        3.45,
+        7.57,
+        2.97,
+        3.06
+       ],
+       "serial_runs": 0
+      }
+     }
+    },
+    {
+     "id": "Q21",
+     "modes": {
+      "default": {
+       "median_ms": 234.98,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        238.69,
+        224.34,
+        369.38,
+        154.91,
+        234.98
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 273.61,
+       "speedup": 0.859,
+       "p": 0.381,
+       "outcome": "same",
+       "runs_ms": [
+        245.07,
+        273.61,
+        377.89,
+        162.23,
+        466.21
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 81.82,
+       "speedup": 2.872,
+       "p": 0.0159,
+       "outcome": "win",
+       "runs_ms": [
+        61.88,
+        63.88,
+        146.65,
+        163.14,
+        81.82
+       ],
+       "serial_runs": 5
+      },
+      "adaptive": {
+       "median_ms": 75.68,
+       "speedup": 3.105,
+       "p": 0.0079,
+       "outcome": "win",
+       "runs_ms": [
+        75.68,
+        69.66,
+        79.89,
+        64.26,
+        136.99
+       ],
+       "serial_runs": 5
+      }
+     }
+    },
+    {
+     "id": "Q22",
+     "modes": {
+      "default": {
+       "median_ms": 0.67,
+       "speedup": 1.0,
+       "p": 1.0,
+       "outcome": "same",
+       "runs_ms": [
+        0.65,
+        0.53,
+        0.67,
+        0.8,
+        0.79
+       ],
+       "serial_runs": 0
+      },
+      "aa": {
+       "median_ms": 0.65,
+       "speedup": 1.031,
+       "p": 0.8492,
+       "outcome": "same",
+       "runs_ms": [
+        0.66,
+        0.55,
+        0.65,
+        0.61,
+        2.48
+       ],
+       "serial_runs": 0
+      },
+      "rule": {
+       "median_ms": 0.67,
+       "speedup": 1.0,
+       "p": 0.3413,
+       "outcome": "same",
+       "runs_ms": [
+        0.67,
+        0.49,
+        0.71,
+        0.55,
+        0.67
+       ],
+       "serial_runs": 0
+      },
+      "adaptive": {
+       "median_ms": 0.65,
+       "speedup": 1.031,
+       "p": 0.7619,
+       "outcome": "same",
+       "runs_ms": [
+        0.61,
+        0.67,
+        0.72,
+        0.65,
+        0.65
+       ],
+       "serial_runs": 0
+      }
+     }
+    }
+   ],
+   "learning_runs": 44
+  }
+ }
+}

@@ -281,4 +281,110 @@ Empirical testing revealed an apparent anomaly:
 
 ---
 
+## Milestone 11: Measurement Audit & Empirical Policy (2026-10-13)
+
+### 11.1 Symptom
+"Latency is almost the same as default, and sometimes higher."
+
+### 11.2 Root causes (each verified by measurement)
+1. **Stale telemetry.** `os_monitor.py` read `bin/telemetry.json` with no age check. The probe was not running and the file held `cpu_percent: 100`, so the mediator saw 100% CPU on an idle machine (real: 11%) and applied stress strategies to every query.
+2. **Wrong rule.** Interleaved measurements (7 runs each) showed:
+   - Queries without a parallel plan (Q03, Q05, Q10): no strategy differs from DEFAULT beyond noise.
+   - Q06 and Q11: serial plans are ~70% faster **even at idle**.
+   - Q01 under stress: the serial plan is **+47% slower**.
+   So a fixed "CPU ≥ 70% → DISABLE_PARALLEL" rule both misses the idle wins and causes the Q01 regression, and the cost guardrail cannot see load effects.
+3. **Overhead.** The mediator added 9–27 ms per query, from these sources:
+   - repeated EXPLAINs;
+   - separate SET/RESET round trips;
+   - a joblib write of the feature cache on every hit (~2 ms);
+   - LinUCB re-running every query as its own baseline.
+4. **Measurement.** Several issues distorted the reported numbers:
+   - The UI compared one default run with one optimizer run.
+   - The UI overwrote the optimizer's latency with the default's when DEFAULT was chosen.
+   - Benchmarks ran phases sequentially.
+   - Templates filtered on 2023 dates, so they returned 0 rows.
+   - On Windows, stress workers re-imported `main.py` and opened PostgreSQL connections.
+5. **Labels.** XGBoost labels came from a hand-written latency formula that still used old strategy IDs. The README's 5.13x figure came from the simulator.
+
+### 11.3 Changes
+- **Telemetry.** The native probe file is ignored when older than 1 s. New *external CPU* signal: CPU used by non-PostgreSQL processes, read in one `NtQuerySystemInformation` call (~5 ms, background thread). PostgreSQL's own parallel workers no longer count as "load".
+- **Empirical policy** (`src/ml_engine/empirical_policy.py`, the new default `adaptive` engine). It works per (query template, load level):
+  - A plan probe prunes strategies whose plan shape equals DEFAULT's.
+  - Strategies are explored round-robin, 3 samples each.
+  - A strategy is rejected early if it is 1.5x slower than DEFAULT.
+  - A strategy is used only if it beats DEFAULT's median by >10% **and** wins ≥75% of pairwise sample comparisons.
+- **Execution.** `BEGIN; SET LOCAL ...; query` in one round trip, then COMMIT. Decision overhead fell to ~0.2 ms.
+- **Baselines and ML.**
+  - Added the `rule` engine (baseline B2).
+  - XGBoost now trains on measured labels, evaluated with GroupKFold over templates against a majority-class baseline.
+  - LinUCB uses log-scaled context with a bias term, is restricted to candidate arms, and takes its reward against the policy's DEFAULT median.
+- **Benchmarks.** Learning phase plus interleaved rounds in random engine order. Added an **A/A control** engine. Wins and regressions require >10% **and** an exact permutation test with p<0.05.
+- **Reproducibility.** `data/tpch_compat.sql` (captured from the live DB) and `data/seed_data.py` now rebuild the exact 316k-row database. Verified: 22/22 queries run on a fresh seed. Unit tests are in `tests/`.
+
+### 11.4 Key methodological finding: bimodal latency
+On this laptop, the same plan's latency is bimodal (e.g. Q07 DEFAULT: 21, 25, 25, 51, 59, 48, 53, 24 ms). With ≤8 samples, a median can fall in either mode:
+- The first version of the policy switched Q07 and Q04 to AVOID_HASH_JOIN on such noise, and they regressed in evaluation.
+- A median ±10% rule called an A/A comparison a 1.7x regression.
+
+The pairwise-dominance switch rule and the permutation test fixed both (6 noisy decisions reverted; A/A: 0 significant wins or regressions).
+
+### 11.5 Results (5 interleaved rounds, median per query, 22 TPC-H-style queries)
+
+| Engine | Normal: geomean / total / sig. wins–regr. | Stressed (~61% external CPU): geomean / total / sig. wins–regr. |
+|---|---|---|
+| Default | 1.00x / 1799 ms | 1.00x / 2842 ms |
+| A/A control | 0.95x / 1943 ms / 0–0 | 0.99x / 2776 ms / 0–1 |
+| Rule (B2) | 1.04x / 1770 ms / 0–0 | 1.24x / 1913 ms / 5–0 |
+| **Adaptive** | **1.44x / 968 ms / 6–0** | **1.25x / 2034 ms / 7–0** |
+| LinUCB | 1.27x / 1392 ms / 5–0 | 1.20x / 2177 ms / 7–0 |
+| XGBoost (in-sample) | 0.84x / 1926 ms / 1–8 | 1.02x / 2400 ms / 2–5 |
+
+Honest reading:
+- The large wins (2.5–3.6x on Q06, Q11, Q14, Q15, Q21) come from avoiding parallel plans and occur **at idle too**. That is a property of PostgreSQL's parallel workers on Windows, not of OS-awareness.
+- The OS-aware component is real but smaller. Under stress the static rule slows Q01 by 1.54x (median), while adaptive keeps the parallel plan. On aggregate under stress, adaptive ≈ rule.
+- XGBoost on 62 measured rows does not beat the majority baseline across unseen templates (53% vs 60%).
+
+### 11.6 Next steps for a publishable evaluation
+1. Real TPC-H data from dbgen (SF1, then SF10) and JOB/IMDB; the current data is TPC-H-shaped with constant columns.
+2. Replicate on Linux and on a desktop with a fixed CPU frequency (High-performance power plan) to tell OS/hardware effects from Windows parallel-worker cost.
+3. More contention levels (0/25/50/75/95%) and realistic neighbours (pgbench, concurrent analytics, I/O).
+4. More rounds (≥10), with confidence intervals on the geomean (bootstrap).
+5. Many more templates before any ML generalization claim; report leave-template-out results.
+
+---
+
+## Milestone 12: Simplification to a Single Measured Decision (2026-10-13)
+
+### 12.1 Why
+The Milestone 11 system worked but was too complex to explain or maintain: 6 strategies, 4 decision engines (adaptive, rule, XGBoost, LinUCB), a sqlparse feature extractor and LRU cache, a SQLite feedback store, a mock database mode, a C++ probe and a synthetic data generator. Its own measurements showed that:
+- every reliable win came from **disabling parallel workers**, and the "different" serial strategies performed the same;
+- XGBoost did not generalize (below the majority baseline), and LinUCB added nothing over the measured policy;
+- extra strategies only created more slow exploration runs and more chances for false switches (Q07, Q04).
+
+### 12.2 New design (1,285 lines of Python instead of 4,833)
+- **One decision**: DEFAULT plan or SERIAL (`SET LOCAL max_parallel_workers_per_gather = 0`).
+- **Queries without a parallel plan are never touched**: one EXPLAIN on first sight. If there is no Gather node, the query always runs as DEFAULT. These queries cannot be slowed by the optimizer (overhead ~0.2 ms).
+- **Policy per (template, load level)**: alternate DEFAULT/SERIAL until each has 3 runs. Then SERIAL is used only if it is ≥10% faster by median and wins ≥75% of run pairs. SERIAL is dropped early if 1.5x slower, and every 25th run re-checks the other plan. Stored as readable JSON (`models/policy.json`) with query labels (Q06, ...).
+- **Load level**: high if external (non-PostgreSQL) CPU ≥ 45%.
+- **Removed**: XGBoost, LinUCB, feature extractor/cache, feedback store, mock mode, the C++ probe, the synthetic data generator, the 4-phase template benchmark. Old documents moved to `docs/archive/`. A full code backup is at `D:\OSAwareQO_backup_20261013_2326`.
+
+### 12.3 Bugs found while validating the redesign
+1. **Startup telemetry spike**: a freshly started CLI process measured 60% external CPU on an idle machine (antivirus scanning the new process), which mislabelled runs as "high" load. Fix: discard the first interval and fill a full 2 s window before the first decision.
+2. **Concurrent benchmarks**: during the first validation run a second benchmark process (with its own stress workers) was running at the same time, so the "normal" phase measured 59% external CPU and the run was discarded. Two shell wrappers for the command were present; the exact cause of the second launch was not determined. Fix: `experiments/benchmark.py` now takes a lock (`reports/.benchmark.lock`) and a second instance refuses to start.
+
+3. **Early rejection of SERIAL needed three iterations** (each found with a full benchmark):
+   - v1 re-evaluated "SERIAL is 1.5x slower" from medians on every run. Noisy DEFAULT runs pushed the ratio back under 1.5x and restarted exploration of a known-slow plan (Q01 under stress: extra 1532 ms runs during evaluation).
+   - v2 made rejection sticky, but rejected after ONE slow SERIAL run. Under stress a single outlier (969 ms vs a 440 ms default) permanently rejected plans that are really 2.3–2.7x faster (Q11, Q14), and adaptive fell to 1.01x under stress.
+   - v3 (current): rejection needs at least two slow SERIAL runs, which must also be the majority; it is sticky until a periodic re-check. In addition, when the median says SERIAL is faster but the pairwise test is not yet convincing, the policy keeps alternating (up to 8 runs each) instead of deciding on 3 noisy samples.
+   The lesson for the method: under contention a single latency sample is not evidence. Every decision rule must survive one outlier.
+
+### 12.4 Results
+See README "Results" (final run with the v3 rule). Normal load: total 2230 → 1667 ms (−25%), geomean 1.17x, 2 wins / 1 false-positive loss (Q12, identical plan). Stressed: total 3647 → 2412 ms (−34%), geomean 1.22x, 5 wins / 0 losses. The static rule reaches 1.24x under stress but makes Q01 1.7x slower (significant).
+
+### 12.5 Next steps
+1. At least 8 rounds per mode and a multiple-comparison correction (e.g. Holm) for per-query claims; with 5 rounds about one false positive per 22 tests is expected.
+2. Real dbgen TPC-H (SF1/SF10), more load levels, a Linux machine, and realistic co-located workloads.
+
+---
+
 *Document finalized and synchronized with active repository state.*

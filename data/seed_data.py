@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.config import PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD, USE_MOCK_DB
+from src.config import PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD
 import psycopg2
 
 
@@ -23,14 +23,20 @@ BRANDS = ["Brand#11", "Brand#12", "Brand#23", "Brand#34", "Brand#45"]
 TYPES = ["STANDARD BRASS", "PROMO POLISHED TIN", "LARGE BRUSHED STEEL", "ECONOMY COPPER"]
 
 
-def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
-    """Populates PostgreSQL with realistic benchmark rows."""
-    print(f"[Seeder] Connecting to PostgreSQL {PG_HOST}:{PG_PORT}/{PG_DATABASE}...")
+def seed_postgresql(num_customers=10000, num_orders=50000, num_items=250000,
+                    num_suppliers=1000, num_parts=5000, dbname=PG_DATABASE, seed=42):
+    """
+    Populates PostgreSQL with the benchmark dataset used in the experiments
+    (defaults: 316,000 rows), applies the TPC-H compatibility layer and runs VACUUM ANALYZE.
+    DROPS and recreates the benchmark tables in `dbname`.
+    """
+    random.seed(seed)
+    print(f"[Seeder] Connecting to PostgreSQL {PG_HOST}:{PG_PORT}/{dbname}...")
     try:
         conn = psycopg2.connect(
             host=PG_HOST,
             port=PG_PORT,
-            dbname=PG_DATABASE,
+            dbname=dbname,
             user=PG_USER,
             password=PG_PASSWORD,
             connect_timeout=3,
@@ -67,14 +73,14 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
     )
 
     # 2. Suppliers
-    print("[Seeder] Inserting 200 suppliers...")
+    print(f"[Seeder] Inserting {num_suppliers} suppliers...")
     supp_data = [
         (
             f"Supplier#{i:05d}",
             random.choice(NATIONS),
             round(random.uniform(1000.0, 50000.0), 2),
         )
-        for i in range(1, 201)
+        for i in range(1, num_suppliers + 1)
     ]
     cursor.executemany(
         "INSERT INTO suppliers (supplier_name, nation, account_balance) VALUES (%s, %s, %s)",
@@ -82,7 +88,7 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
     )
 
     # 3. Parts
-    print("[Seeder] Inserting 1000 parts...")
+    print(f"[Seeder] Inserting {num_parts} parts...")
     part_data = [
         (
             f"Part#{i:06d}",
@@ -90,7 +96,7 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
             random.choice(TYPES),
             round(random.uniform(10.0, 1000.0), 2),
         )
-        for i in range(1, 1001)
+        for i in range(1, num_parts + 1)
     ]
     cursor.executemany(
         "INSERT INTO parts (part_name, part_brand, part_type, retail_price) VALUES (%s, %s, %s, %s)",
@@ -119,8 +125,8 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
     items_data = [
         (
             random.randint(1, num_orders),
-            random.randint(1, 1000),
-            random.randint(1, 200),
+            random.randint(1, num_parts),
+            random.randint(1, num_suppliers),
             random.randint(1, 50),
             round(random.uniform(20.0, 5000.0), 2),
             round(random.choice([0.0, 0.02, 0.05, 0.08, 0.10]), 2),
@@ -134,6 +140,16 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
     )
 
     conn.commit()
+
+    # TPC-H names (views, nation/region, generated columns) used by data/tpch_benchmark.sql
+    compat_path = PROJECT_ROOT / "data" / "tpch_compat.sql"
+    cursor.execute(compat_path.read_text(encoding="utf-8"))
+    conn.commit()
+    print("[Seeder] TPC-H compatibility layer applied.")
+
+    # Planner statistics, otherwise plans on a fresh table are not representative
+    conn.autocommit = True
+    cursor.execute("VACUUM ANALYZE")
     cursor.close()
     conn.close()
     print("[Seeder] Benchmark dataset populated successfully!")
@@ -141,4 +157,11 @@ def seed_postgresql(num_customers=1000, num_orders=5000, num_items=20000):
 
 
 if __name__ == "__main__":
-    seed_postgresql()
+    import argparse
+    ap = argparse.ArgumentParser(description="Seed the QuerySync benchmark database (drops existing tables!)")
+    ap.add_argument("--dbname", default=PG_DATABASE)
+    ap.add_argument("--scale", type=float, default=1.0, help="multiplier on the default row counts")
+    a = ap.parse_args()
+    k = a.scale
+    seed_postgresql(num_customers=int(10000 * k), num_orders=int(50000 * k), num_items=int(250000 * k),
+                    num_suppliers=max(10, int(1000 * k)), num_parts=max(10, int(5000 * k)), dbname=a.dbname)

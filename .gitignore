@@ -37,3 +37,7 @@ Phase-I.tex
 
 # User uploaded media
 .user_uploaded/
+
+# Benchmark lock / temp files
+reports/.benchmark.lock
+models/*.tmp
