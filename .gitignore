@@ -1,0 +1,20 @@
+# environment and local database
+venv/
+pgsql/
+pgdata/
+pg.log
+.env
+__pycache__/
+*.pyc
+
+# generated TPC-H data (regenerate with: python main.py load-data)
+data/
+
+# local editor / app settings
+.claude/
+
+# raw logs
+results/*.log
+
+# local dashboard run logs (training data you collect yourself)
+results/live*.jsonl
