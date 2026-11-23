@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuerySync</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --text:#e6edf3; --dim:#8b949e;
+          --blue:#58a6ff; --green:#3fb950; --red:#f85149; --amber:#d29922; }
+  html { color-scheme: dark; }
+  * { box-sizing: border-box; scrollbar-color: #484f58 var(--bg); scrollbar-width: thin; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 5px; border: 2px solid var(--bg); }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  main { max-width:1150px; margin:0 auto; padding:16px; }
+  h1 { font-size:21px; margin:0; } .sub { color:var(--dim); font-size:13px; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .stat .v { font:600 22px ui-monospace, monospace; } .stat .k { color:var(--dim); font-size:12px; }
+  .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
+  @media (max-width:820px) { .grid { grid-template-columns:1fr; } }
+  select, textarea, input, button { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line);
+          border-radius:6px; padding:8px; font:inherit; }
+  textarea { font:12px ui-monospace, monospace; height:210px; resize:vertical; }
+  button { cursor:pointer; font-weight:600; } button.primary { background:#238636; border-color:#2ea043; }
+  button.hdr { width:auto; white-space:nowrap; } button.hdr.on { background:#5c1d1d; border-color:var(--red); }
+  label { color:var(--dim); font-size:12px; display:block; margin:8px 0 4px; }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .verdict { padding:10px; border-radius:6px; border:1px solid var(--line); margin-bottom:10px; }
+  .verdict b { display:block; font-size:16px; }
+  .faster { border-color:var(--green); } .slower { border-color:var(--red); } .default, .same { border-color:var(--blue); }
+  .bar { height:22px; border-radius:4px; margin:4px 0 10px; display:flex; align-items:center; padding-left:8px;
+         font:12px ui-monospace, monospace; white-space:nowrap; }
+  .mono { font:12px ui-monospace, monospace; color:var(--dim); word-break:break-word; }
+  .pred { display:grid; grid-template-columns:140px 1fr 52px; gap:6px; align-items:center; font-size:12px; margin:2px 0; }
+  .pred .track { background:var(--bg); border-radius:3px; height:12px; position:relative; }
+  .pred .fill { position:absolute; top:0; bottom:0; border-radius:3px; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; border:1px solid var(--line); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td, th { border-bottom:1px solid var(--line); padding:5px 6px; text-align:left; } th { color:var(--dim); font-weight:500; }
+  .modal { position:fixed; inset:0; background:rgba(1,4,9,.75); display:none; align-items:flex-start; justify-content:center;
+           padding:24px 16px; z-index:10; overflow-y:auto; }
+  .modal.open { display:flex; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; width:100%; max-width:1100px; padding:16px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 12px; } .tabs button { width:auto; }
+  .tabs button.active { border-color:var(--blue); color:var(--blue); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:10px; margin:10px 0 14px; }
+  .tile { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .tile .v { font:600 20px ui-monospace, monospace; } .tile .k { color:var(--dim); font-size:12px; }
+  .chart { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:12px; overflow-x:auto; }
+  .chart h4 { margin:0 0 2px; font-size:13px; } .chart svg { width:100%; min-width:700px; height:auto; display:block; }
+  .chart svg text { fill:var(--dim); font:11px system-ui, sans-serif; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--dim); margin-top:4px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .progress { height:8px; background:var(--bg); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:10px 0; }
+  .progress div { height:100%; background:var(--blue); width:0; transition:width .4s; }
+  .gantt svg { min-width:760px; }
+  .two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+  @media (max-width:820px) { .two { grid-template-columns:1fr; } }
+  h2 { font-size:16px; margin:0 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>QuerySync</h1>
+      <div class="sub">AI-driven, OS-aware query optimization and scheduling for PostgreSQL 16 · TPC-H SF1 (8.66 million rows)</div></div>
+    <div class="row" style="flex:0 0 auto">
+      <button class="hdr" onclick="openReport()">Results &amp; charts</button>
+      <button id="stress" class="hdr" onclick="toggleStress()">Start CPU stress</button>
+    </div>
+  </header>
+
+  <div class="card stats">
+    <div class="stat"><div class="k">Total CPU</div><div class="v" id="cpu">--</div></div>
+    <div class="stat"><div class="k">External CPU (other programs)</div><div class="v" id="ext">--</div></div>
+    <div class="stat"><div class="k">PostgreSQL CPU</div><div class="v" id="pg">--</div></div>
+    <div class="stat"><div class="k">RAM</div><div class="v" id="mem">--</div></div>
+    <div class="stat"><div class="k">Load level</div><div class="v" id="level">--</div></div>
+    <div class="stat"><div class="k">AI model</div><div class="v" id="model">--</div></div>
+    <div class="stat"><div class="k">OS priority boost</div><div class="v" id="boost">--</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <label for="preset">TPC-H query (fresh parameters, never used for training)</label>
+      <select id="preset" onchange="pick()"><option value="">Choose a query or type SQL below</option></select>
+      <label for="sql">SQL</label>
+      <textarea id="sql" spellcheck="false"></textarea>
+      <div class="row">
+        <div><label for="runs">Runs per side (median compared)</label><input id="runs" type="number" min="1" max="9" value="3"></div>
+      </div>
+      <label>&nbsp;</label>
+      <button class="primary" id="go" onclick="run()">Compare AI with default PostgreSQL</button>
+    </div>
+    <div class="card" id="result"><div class="sub">Pick a query and press Compare. The AI explains why it chose a plan;
+      both versions run alternately and the medians are compared.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>OS query scheduler · multi-user demo</h2>
+    <div class="sub">Many users send queries at random times (Poisson arrivals, 60% short interactive queries). The same
+      arrival trace runs twice: <b>plain PostgreSQL</b> (every query starts at once with its default plan) and <b>QuerySync</b>
+      (AI plans + OS-style scheduling: admission control with a measured degree of multiprogramming, Banker's-style memory
+      check, the selected CPU-scheduling policy, and HIGH process priority under load). Takes 1-3 minutes.</div>
+    <div class="row" style="margin-top:8px;align-items:end">
+      <div><label for="policy">Scheduling policy</label><select id="policy">
+        <option value="sjf">SJF - shortest (predicted) job first (best in our experiments)</option>
+        <option value="hrrn">HRRN - highest response ratio next (no starvation)</option>
+        <option value="priority">Priority (interactive first) with aging</option>
+        <option value="fcfs">FCFS - first come, first served</option></select></div>
+      <div><label for="njobs">Queries in the trace</label><input id="njobs" type="number" min="10" max="60" value="24"></div>
+      <div><button class="primary" id="sd-go" onclick="startSched()">Run scheduler demo</button></div>
+    </div>
+    <div id="sd-status"></div><div id="sd-result"></div>
+  </div>
+</main>
+
+<div class="modal" id="report" onclick="if (event.target === this) closeReport()">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:16px">Results &amp; charts</b><button class="hdr" onclick="closeReport()">Close</button>
+    </div>
+    <div class="tabs">
+      <button id="tab-val" class="active" onclick="showTab('val')">Live validation</button>
+      <button id="tab-eval" onclick="showTab('eval')">Model evaluation</button>
+      <button id="tab-os" onclick="showTab('os')">OS scheduling</button>
+      <button id="tab-quick" onclick="showTab('quick')">Quick benchmark (now)</button>
+    </div>
+    <div id="pane-val"></div>
+    <div id="pane-eval" style="display:none"></div>
+    <div id="pane-os" style="display:none"></div>
+    <div id="pane-quick" style="display:none">
+      <div class="sub">Runs one instance of each of the 22 TPC-H queries, 5 times as default PostgreSQL and 5 times through
+        QuerySync (AI decision time included), interleaved, at the <b>current</b> load. Takes a few minutes.</div>
+      <div style="max-width:420px;margin-top:10px"><button class="primary" id="qb-go" onclick="startQuick()">Start quick benchmark</button></div>
+      <div id="qb-status"></div><div id="qb-result"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let queries = [], pollTimer = null;
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+async function telemetry() {
+  try {
+    const t = await (await fetch('/api/telemetry')).json();
+    $('cpu').textContent = t.cpu + '%'; $('ext').textContent = t.external_cpu + '%';
+    $('pg').textContent = t.postgres_cpu + '%'; $('mem').textContent = t.mem + '%'; $('level').textContent = t.level;
+    $('model').textContent = t.model ? 'trained' : 'none';
+    $('boost').textContent = t.os_boost ? 'HIGH' : (t.os_boost_mode === 'auto' ? 'auto' : t.os_boost_mode);
+    $('boost').style.color = t.os_boost ? 'var(--green)' : '';
+    $('stress').classList.toggle('on', t.stress); $('stress').textContent = t.stress ? 'Stop CPU stress' : 'Start CPU stress';
+  } catch (e) {}
+}
+async function toggleStress() { await fetch('/api/stress', {method: 'POST'}); telemetry(); }
+async function presets() {
+  queries = await (await fetch('/api/queries')).json();
+  for (const q of queries) $('preset').add(new Option(q.id, q.id));
+}
+function pick() { const q = queries.find(q => q.id === $('preset').value); if (q) $('sql').value = q.sql; }
+
+async function run() {
+  const sql = $('sql').value.trim(); if (!sql) return;
+  const q = queries.find(q => q.sql === sql);
+  $('go').disabled = true; $('go').textContent = 'Running...';
+  try {
+    const res = await fetch('/api/execute', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sql, runs: +$('runs').value, label: q ? q.id : null})});
+    const d = await res.json();
+    if (!res.ok) { $('result').innerHTML = `<div class="verdict slower"><b>Error</b>${esc(d.error)}</div>`; return; }
+    show(d);
+  } finally { $('go').disabled = false; $('go').textContent = 'Compare AI with default PostgreSQL'; }
+}
+
+function show(d) {
+  const sign = v => (v > 0 ? '+' : '') + v;
+  const titles = { faster: `${(d.default_ms / d.ai_ms).toFixed(2)}x faster (${d.change_pct}%)`,
+    slower: `Slower (${sign(d.change_pct)}%)`, same: `No measurable difference (${sign(d.change_pct)}%)`,
+    default: 'AI kept the default plan' };
+  const max = Math.max(d.default_ms, d.ai_ms);
+  const bar = (ms, c, name) => `<div class="sub">${name}</div><div class="bar" style="width:${Math.max(18, 100 * ms / max)}%;background:${c}">${ms} ms</div>`;
+  let preds = '';
+  if (d.predictions) {
+    const entries = Object.entries(d.predictions).sort((a, b) => b[1] - a[1]);
+    const top = Math.max(2, ...entries.map(e => e[1]));
+    preds = '<div class="sub" style="margin:8px 0 4px">AI prediction: speed vs default plan (&gt;1 = faster)</div>' +
+      entries.map(([n, v]) => `<div class="pred"><span class="mono">${esc(n)}</span><div class="track"><div class="fill"
+        style="left:0;width:${Math.min(100, 100 * v / top)}%;background:${v >= 1.15 ? '#238636' : v < 0.95 ? '#8b2c2c' : '#30363d'}"></div></div>
+        <span class="mono">${v.toFixed(2)}x</span></div>`).join('');
+  }
+  $('result').innerHTML = `<div class="verdict ${d.verdict}"><b>${titles[d.verdict]}</b>${esc(d.reason)}</div>
+    ${bar(d.default_ms, '#30363d', 'Default PostgreSQL (median)')}
+    ${bar(d.ai_ms, d.verdict === 'faster' ? '#238636' : '#1f6feb', 'QuerySync AI (median, incl. ' + d.overhead_ms + ' ms decision time)')}
+    <div class="mono">Load: ${d.load.level} (external CPU ${d.load.external_cpu}%) · plans used: ${d.choices.join(', ')}</div>
+    <div class="mono">OS layer: ${d.os_boost ? 'PostgreSQL processes ran at HIGH priority (high external load)' : 'normal priority (load is low, boosting not needed)'}${d.predicted_ms ? ' · predicted run time ' + Math.round(d.predicted_ms) + ' ms' : ''}</div>
+    <div class="mono">Default runs: ${d.default_runs.join(', ')} · AI runs: ${d.ai_runs.join(', ')}</div>${preds}`;
+}
+
+// ---------------- results popup ----------------
+function openReport() { $('report').classList.add('open'); showTab('val'); }
+function closeReport() { $('report').classList.remove('open'); clearTimeout(pollTimer); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReport(); });
+function showTab(t) {
+  for (const x of ['val', 'eval', 'os', 'quick']) { $('pane-' + x).style.display = x === t ? '' : 'none'; $('tab-' + x).classList.toggle('active', x === t); }
+  if (t === 'quick') pollQuick(); else loadReport(t);
+}
+const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+const card = (t, s, svg, legend = '') => `<div class="chart"><h4>${t}</h4><div class="sub">${s}</div>${svg}${legend}</div>`;
+const legendHtml = items => `<div class="legend">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div>`;
+
+function barsChart(labels, series, title, sub) {   // series: [[name, color, values(speedups)]]
+  const W = 900, H = 270, L = 48, R = 8, T = 10, B = 54, n = labels.length, gw = (W - L - R) / n;
+  const bw = Math.min(14, (gw - 4) / series.length);
+  let maxL = 1; series.forEach(s => s[2].forEach(v => maxL = Math.max(maxL, Math.abs(Math.log2(v)))));
+  maxL = Math.ceil(maxL);
+  const y = v => T + (maxL - Math.log2(v)) / (2 * maxL) * (H - T - B);
+  let g = `<rect x="${L}" y="${y(1.1)}" width="${W - L - R}" height="${y(1 / 1.1) - y(1.1)}" fill="#fff" opacity="0.06"/>`;
+  for (let k = -maxL; k <= maxL; k++) { const v = 2 ** k;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${k === 0 ? '#8b949e' : '#30363d'}"/>
+      <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v >= 1 ? v + 'x' : '1/' + (1 / v) + 'x'}</text>`; }
+  labels.forEach((lab, i) => {
+    const x0 = L + i * gw + (gw - series.length * bw) / 2;
+    series.forEach(([name, c, vals], j) => { const v = vals[i], top = Math.min(y(v), y(1)), h = Math.max(1, Math.abs(y(v) - y(1)));
+      g += `<rect x="${x0 + j * bw}" y="${top}" width="${bw - 1}" height="${h}" fill="${c}"><title>${lab} ${name}: ${v.toFixed(2)}x</title></rect>`; });
+    g += `<text transform="translate(${L + i * gw + gw / 2},${H - B + 10}) rotate(60)" font-size="10">${esc(lab)}</text>`;
+  });
+  return card(title, sub, `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`, legendHtml(series.map(s => [s[1], s[0]])));
+}
+
+async function loadReport(which) {
+  const rep = await (await fetch('/api/report')).json();
+  if (which === 'val') {
+    const v = rep.validation;
+    if (!v) { $('pane-val').innerHTML = '<div class="sub">No live validation yet. Run: python main.py validate</div>'; return; }
+    let html = `<div class="sub">${esc(v.generated_at)} · held-out queries (never used for training) · median of ${v.rounds} interleaved runs ·
+      AI time includes its decision overhead · win/loss = &gt;10% and p &lt; 0.05 · "aa" = default vs itself (noise control)</div>`;
+    for (const [lv, res] of Object.entries(v.levels)) {
+      const s = res.summary, d = s.default.total_s;
+      html += `<h3 style="margin:14px 0 4px;font-size:15px">${lv === 'stress' ? 'Under CPU stress' : 'Normal load'}
+        <span class="sub">(external CPU ${res.external_cpu_median}%, ${res.per_query.length} queries)</span></h3>
+        <div class="tiles">${tile('Total, default', d.toFixed(1) + ' s')}${tile('Total, QuerySync AI', s.ai.total_s.toFixed(1) + ' s')}
+        ${tile('Change', ((s.ai.total_s / d - 1) * 100).toFixed(1) + '%')}${tile('Geomean speedup', s.ai.geomean.toFixed(2) + 'x')}
+        ${tile('Wins / losses', s.ai.wins + ' / ' + s.ai.losses)}${tile('A/A noise (wins/losses)', s.aa.wins + ' / ' + s.aa.losses)}
+        ${s.ai_os ? tile('AI + OS priority', s.ai_os.total_s.toFixed(1) + ' s (' + ((s.ai_os.total_s / d - 1) * 100).toFixed(1) + '%)') : ''}</div>` +
+        barsChart(res.per_query.map(r => r.id), [['A/A control', '#9aa0a6', res.per_query.map(r => r.modes.aa.speedup)],
+          ['rule', '#e0a020', res.per_query.map(r => r.modes.rule.speedup)], ['AI', '#2f81f7', res.per_query.map(r => r.modes.ai.speedup)]]
+          .concat(res.per_query[0].modes.ai_os ? [['AI + OS priority', '#3fb950', res.per_query.map(r => r.modes.ai_os.speedup)]] : []),
+          'Speedup per held-out query vs default PostgreSQL', 'Log scale; grey band = within 10%.');
+    }
+    $('pane-val').innerHTML = html;
+  } else if (which === 'os') {
+    $('pane-os').innerHTML = osReport(rep.scheduling);
+  } else {
+    const e = rep.evaluation;
+    if (!e) { $('pane-eval').innerHTML = '<div class="sub">No evaluation yet. Run: python main.py evaluate</div>'; return; }
+    let html = `<div class="sub">Offline evaluation with measured latencies. "oracle" = best possible hint per query (upper bound).</div>`;
+    for (const [split, title] of [['instances', 'Unseen parameter instances'], ['templates', 'Unseen query templates (5-fold)']]) {
+      html += `<h3 style="margin:14px 0 4px;font-size:15px">${title}</h3><table><tr><th>Load</th><th>Strategy</th><th>Total</th><th>vs default</th><th>Geomean</th><th>Regressions (&gt;1.2x)</th></tr>`;
+      for (const [lv, res] of Object.entries(e.splits[split].by_level))
+        for (const [name, r] of Object.entries(res))
+          html += `<tr><td>${lv}</td><td>${name}</td><td>${r.total_s.toFixed(1)} s</td><td>${r.reduction_pct >= 0 ? '−' : '+'}${Math.abs(r.reduction_pct).toFixed(1)}%</td>
+            <td>${r.geomean_speedup.toFixed(2)}x</td><td>${r.regressions}</td></tr>`;
+      html += '</table>';
+    }
+    const m = await (await fetch('/api/model')).json();
+    if (m.trained) html += '<h3 style="margin:14px 0 4px;font-size:15px">What the model pays attention to</h3><table>' +
+      m.features.map(([n, v]) => `<tr><td class="mono">${esc(n)}</td><td>${(v * 100).toFixed(1)}%</td></tr>`).join('') + '</table>';
+    $('pane-eval').innerHTML = html;
+  }
+}
+
+async function startQuick() {
+  $('qb-go').disabled = true; $('qb-result').innerHTML = '';
+  await fetch('/api/quickbench', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({rounds: 5})});
+  pollQuick();
+}
+async function pollQuick() {
+  clearTimeout(pollTimer);
+  const b = await (await fetch('/api/quickbench')).json();
+  $('qb-go').disabled = b.running;
+  if (b.running) { const pct = b.total ? Math.round(100 * b.done / b.total) : 0;
+    $('qb-status').innerHTML = `<div class="progress"><div style="width:${pct}%"></div></div><div class="sub">Running... ${b.done} of ${b.total} executions (${pct}%)</div>`;
+    pollTimer = setTimeout(pollQuick, 1500); return; }
+  $('qb-status').innerHTML = b.error ? `<div class="verdict slower"><b>Error</b>${esc(b.error)}</div>` : '';
+  const r = b.result; if (!r) return;
+  $('qb-result').innerHTML = `<div class="sub" style="margin-top:10px">Finished ${r.finished_at} · load ${r.load.level} (external CPU ${r.load.external_cpu}%) · ${r.rounds} runs per side</div>
+    <div class="tiles">${tile('Total, default', r.default_s + ' s')}${tile('Total, QuerySync AI', r.ai_s + ' s')}
+    ${tile('Change', ((r.ai_s / r.default_s - 1) * 100).toFixed(1) + '%')}${tile('Geomean speedup', r.geomean.toFixed(2) + 'x')}
+    ${tile('Wins / losses', r.wins + ' / ' + r.losses)}</div>` +
+    barsChart(r.rows.map(x => x.id + ' · ' + x.choice), [['AI vs default', '#2f81f7', r.rows.map(x => x.speedup)]],
+      'Speedup per query (label = plan the AI chose)', 'Log scale; grey band = within 10%.');
+}
+// ---------------- OS layer ----------------
+const CLS_COLOR = {interactive: '#2f81f7', batch: '#d29922'};
+const fmt = (v, d = 2) => v == null ? '-' : (+v).toFixed(d);
+
+function ganttChart(jobs, title, sub, tmax) {   // rows = execution slots; dashed line = waiting, bar = running
+  const ok = jobs.filter(j => j.end != null && !j.error);
+  const slots = [...new Set(ok.map(j => j.slot))].sort((a, b) => a - b);
+  const W = 900, L = 56, R = 10, T = 8, rowH = Math.max(9, Math.min(20, 260 / Math.max(1, slots.length))), B = 26;
+  const H = T + slots.length * rowH + B;
+  tmax = tmax || Math.max(...ok.map(j => j.end), 1);
+  const x = t => L + t / tmax * (W - L - R);
+  let g = '';
+  for (let k = 0; k <= 10; k++) { const t = tmax * k / 10;
+    g += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - B}" stroke="#30363d"/><text x="${x(t)}" y="${H - 8}" text-anchor="middle">${t.toFixed(0)}s</text>`; }
+  slots.forEach((sl, r) => g += `<text x="${L - 6}" y="${T + r * rowH + rowH * 0.7}" text-anchor="end">slot ${sl + 1}</text>`);
+  for (const j of ok) {
+    const r = slots.indexOf(j.slot), y0 = T + r * rowH;
+    g += `<line x1="${x(j.arrival)}" x2="${x(j.start)}" y1="${y0 + rowH / 2}" y2="${y0 + rowH / 2}" stroke="#8b949e" stroke-dasharray="2 2"/>
+      <rect x="${x(j.start)}" y="${y0 + 1}" width="${Math.max(1.5, x(j.end) - x(j.start))}" height="${rowH - 2}" rx="2" fill="${CLS_COLOR[j.cls] || '#888'}"
+        stroke="${j.boosted ? '#3fb950' : 'none'}"><title>#${j.id} ${j.template} (${j.cls}) · plan ${j.hint} · waited ${(j.start - j.arrival).toFixed(2)} s · ran ${(j.end - j.start).toFixed(2)} s${j.predicted_ms ? ' · predicted ' + Math.round(j.predicted_ms) + ' ms' : ''}</title></rect>`;
+  }
+  return `<div class="chart gantt"><h4>${title}</h4><div class="sub">${sub}</div><svg viewBox="0 0 ${W} ${H}">${g}</svg>
+    ${legendHtml([[CLS_COLOR.interactive, 'interactive query'], [CLS_COLOR.batch, 'batch report'], ['#8b949e', 'dashed = waiting in queue']])}</div>`;
+}
+
+function lineChart(xs, series, title, sub, xlab, ylab) {   // series: [[name, color, ys, flat?]]
+  const W = 900, H = 260, L = 56, R = 12, T = 10, B = 40;
+  const ymax = Math.max(...series.flatMap(s => s[2])) * 1.1, xmax = Math.max(...xs), xmin = Math.min(...xs);
+  const x = v => L + (v - xmin) / (xmax - xmin) * (W - L - R), y = v => T + (1 - v / ymax) * (H - T - B);
+  let g = '';
+  for (let k = 0; k <= 5; k++) { const v = ymax * k / 5;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#30363d"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(0)}</text>`; }
+  xs.forEach(v => g += `<text x="${x(v)}" y="${H - B + 16}" text-anchor="middle">${v}</text>`);
+  g += `<text x="${(L + W) / 2}" y="${H - 4}" text-anchor="middle">${xlab}</text><text transform="translate(14,${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${ylab}</text>`;
+  for (const [name, c, ys, flat] of series) {
+    if (flat) { g += `<line x1="${L}" x2="${W - R}" y1="${y(ys[0])}" y2="${y(ys[0])}" stroke="${c}" stroke-dasharray="6 4"/>`; continue; }
+    g += `<polyline fill="none" stroke="${c}" stroke-width="2" points="${xs.map((v, i) => x(v) + ',' + y(ys[i])).join(' ')}"/>` +
+      xs.map((v, i) => `<circle cx="${x(v)}" cy="${y(ys[i])}" r="3.5" fill="${c}"><title>${name}, MPL ${v}: ${ys[i]}</title></circle>`).join('');
+  }
+  return card(title, sub, `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`, legendHtml(series.map(s => [s[1], s[0] + (s[3] ? ' (dashed)' : '')])));
+}
+
+function hbarChart(rows, title, sub, unit) {   // rows: [[label, value, color]]
+  const W = 900, L = 170, R = 70, rowH = 22, H = rows.length * rowH + 8, vmax = Math.max(...rows.map(r => r[1])) || 1;
+  let g = '';
+  rows.forEach(([lab, v, c], i) => { const y0 = 4 + i * rowH, w = v / vmax * (W - L - R);
+    g += `<text x="${L - 8}" y="${y0 + 15}" text-anchor="end">${esc(lab)}</text><rect x="${L}" y="${y0 + 3}" width="${Math.max(1, w)}" height="${rowH - 6}" rx="3" fill="${c}"/>
+      <text x="${L + w + 6}" y="${y0 + 15}">${fmt(v)} ${unit}</text>`; });
+  return card(title, sub, `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`);
+}
+
+const STRAT_LABEL = {postgres: 'plain PostgreSQL', ai_only: 'AI plans only', fcfs: 'QuerySync FCFS', sjf: 'QuerySync SJF',
+  hrrn: 'QuerySync HRRN', priority: 'QuerySync Priority+aging'};
+const STRAT_COLOR = {postgres: '#6e7681', ai_only: '#8957e5', fcfs: '#1f6feb', sjf: '#2f81f7', hrrn: '#3fb950', priority: '#d29922'};
+
+function osReport(sc) {
+  if (!sc) return '<div class="sub">No OS-layer experiments yet. Run: python main.py schedule</div>';
+  let html = `<div class="sub">${esc(sc.generated_at || '')} · real PostgreSQL, real time. Turnaround = finish - arrival (waiting + running);
+    QuerySync times include the AI decision.</div>`;
+  if (sc.mpl) {
+    const MPLS = [1, 2, 3, 4, 6, 8], cols = {idle: '#2f81f7', stress: '#d29922'}, series = [];
+    for (const l of Object.keys(sc.mpl)) {
+      series.push([`QuerySync, ${l} (best MPL ${sc.mpl[l].best_mpl})`, cols[l], MPLS.map(m => sc.mpl[l].rows[String(m)].throughput_per_min)]);
+      series.push([`plain PostgreSQL, all at once (${l})`, cols[l], [sc.mpl[l].rows.postgres.throughput_per_min], true]);
+    }
+    html += `<h3 style="margin:14px 0 4px;font-size:15px">1. Degree of multiprogramming (thrashing)</h3>` +
+      lineChart(MPLS, series, 'Throughput vs number of queries allowed to run at once',
+        '30 queries submitted together; dashed = plain PostgreSQL running all 30 at once.', 'degree of multiprogramming (MPL)', 'queries / min');
+  }
+  if (sc.policies) {
+    html += `<h3 style="margin:14px 0 4px;font-size:15px">2. Scheduling policies (multi-user trace)</h3>`;
+    for (const [lv, res] of Object.entries(sc.policies)) {
+      const s = res.summary, base = s.postgres.avg_turnaround_s;
+      const best = Object.keys(s).filter(k => k !== 'postgres' && k !== 'ai_only').sort((a, b) => s[a].avg_turnaround_s - s[b].avg_turnaround_s)[0];
+      html += `<div class="sub" style="margin-top:8px"><b>${lv === 'stress' ? 'Under CPU stress' : 'Normal load'}</b> · external CPU ${res.external_cpu}% ·
+        ${res.n_jobs} queries per run, ${res.rate_per_s} arrivals/s (85% of plain PostgreSQL's capacity) · mean of ${res.seeds.length} traces</div>
+        <div class="tiles">${tile('Avg turnaround, PostgreSQL', fmt(base) + ' s')}${tile('Avg turnaround, ' + STRAT_LABEL[best], fmt(s[best].avg_turnaround_s) + ' s')}
+        ${tile('Change', ((s[best].avg_turnaround_s / base - 1) * 100).toFixed(1) + '%')}
+        ${tile('Interactive queries', fmt(s.postgres.avg_interactive_s) + ' → ' + fmt(s[best].avg_interactive_s) + ' s')}
+        ${tile('p95 turnaround', fmt(s.postgres.p95_turnaround_s) + ' → ' + fmt(s[best].p95_turnaround_s) + ' s')}</div>
+        <table><tr><th>Strategy</th><th>Avg turnaround</th><th>p95</th><th>Avg wait</th><th>Max wait</th><th>Interactive avg</th><th>Batch avg</th><th>Throughput /min</th></tr>` +
+        Object.entries(s).map(([k, m]) => `<tr><td>${STRAT_LABEL[k] || k}</td><td>${fmt(m.avg_turnaround_s)} s</td><td>${fmt(m.p95_turnaround_s)} s</td><td>${fmt(m.avg_wait_s)} s</td>
+          <td>${fmt(m.max_wait_s)} s</td><td>${fmt(m.avg_interactive_s)} s</td><td>${fmt(m.avg_batch_s)} s</td><td>${fmt(m.throughput_per_min, 1)}</td></tr>`).join('') + '</table>' +
+        hbarChart(Object.keys(s).map(k => [STRAT_LABEL[k] || k, s[k].avg_turnaround_s, STRAT_COLOR[k]]), 'Average turnaround time', 'Lower is better.', 's');
+      if (res.gantt && res.gantt.postgres && res.gantt[best]) {
+        const tmax = Math.max(...res.gantt.postgres.concat(res.gantt[best]).filter(j => j.end != null).map(j => j.end));
+        html += `<div>${ganttChart(res.gantt.postgres, 'Plain PostgreSQL', 'every query starts immediately', tmax)}
+          ${ganttChart(res.gantt[best], STRAT_LABEL[best], 'admission control + scheduling (green outline = HIGH OS priority)', tmax)}</div>`;
+      }
+    }
+  }
+  if (sc.priority) {
+    html += `<h3 style="margin:14px 0 4px;font-size:15px">3. OS process priority of PostgreSQL</h3><table>
+      <tr><th>Load</th><th>External CPU</th><th>Configuration</th><th>Total, 22 queries</th><th>Change</th></tr>`;
+    for (const [lv, r] of Object.entries(sc.priority))
+      for (const [c, t] of Object.entries(r.totals_s))
+        html += `<tr><td>${lv}</td><td>${r.external_cpu}%</td><td>${c.replace(/_/g, ' ')}</td><td>${fmt(t)} s</td><td>${r.change_pct[c] > 0 ? '+' : ''}${r.change_pct[c]}%</td></tr>`;
+    html += '</table>';
+    if (sc.priority.stress) html += barsChart(sc.priority.stress.per_query.map(r => r.id),
+      Object.keys(sc.priority.stress.totals_s).filter(c => c !== 'normal').map((c, i) => [c.replace(/_/g, ' '), ['#3fb950', '#d29922'][i], sc.priority.stress.per_query.map(r => r.speedup[c])]),
+      'Speedup per query from OS priority, under CPU stress', 'vs the same plan at NORMAL priority; log scale.');
+  }
+  return html;
+}
+
+async function startSched() {
+  $('sd-go').disabled = true; $('sd-result').innerHTML = '';
+  const res = await fetch('/api/schedule', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({policy: $('policy').value, n_jobs: +$('njobs').value})});
+  if (!res.ok) { $('sd-status').innerHTML = `<div class="verdict slower"><b>Error</b>${esc((await res.json()).error)}</div>`; $('sd-go').disabled = false; return; }
+  pollSched();
+}
+let schedTimer = null;
+async function pollSched() {
+  clearTimeout(schedTimer);
+  const b = await (await fetch('/api/schedule')).json();
+  $('sd-go').disabled = b.running;
+  if (b.running) { const pct = b.total ? Math.round(100 * b.done / b.total) : 0;
+    $('sd-status').innerHTML = `<div class="progress"><div style="width:${pct}%"></div></div><div class="sub">Running: ${esc(b.stage)} · ${b.done} of ${b.total} queries finished</div>`;
+    schedTimer = setTimeout(pollSched, 1000); return; }
+  $('sd-status').innerHTML = b.error ? `<div class="verdict slower"><b>Error</b>${esc(b.error)}</div>` : '';
+  const r = b.result; if (!r) return;
+  const p = r.runs.postgres.metrics, q = r.runs.querysync.metrics, pc = (a, b) => ((b / a - 1) * 100).toFixed(1) + '%';
+  const tmax = Math.max(...r.runs.postgres.jobs.concat(r.runs.querysync.jobs).filter(j => j.end != null).map(j => j.end));
+  $('sd-result').innerHTML = `<div class="sub" style="margin-top:10px">Finished ${r.finished_at} · ${r.n_jobs} queries · ${r.rate_per_s} arrivals/s ·
+      load ${r.load.level} (external CPU ${r.load.external_cpu}%) · policy ${r.policy.toUpperCase()}</div>
+    <div class="tiles">${tile('Avg turnaround', fmt(p.avg_turnaround_s) + ' → ' + fmt(q.avg_turnaround_s) + ' s')}${tile('Change', pc(p.avg_turnaround_s, q.avg_turnaround_s))}
+      ${tile('Interactive avg', fmt(p.avg_interactive_s) + ' → ' + fmt(q.avg_interactive_s) + ' s')}${tile('p95 turnaround', fmt(p.p95_turnaround_s) + ' → ' + fmt(q.p95_turnaround_s) + ' s')}
+      ${tile('Max wait in queue', fmt(q.max_wait_s) + ' s')}${tile('Throughput /min', fmt(p.throughput_per_min, 1) + ' → ' + fmt(q.throughput_per_min, 1))}</div>
+    <div>${ganttChart(r.runs.postgres.jobs, 'Plain PostgreSQL', 'every query starts at once, default plans', tmax)}
+      ${ganttChart(r.runs.querysync.jobs, 'QuerySync (' + r.policy.toUpperCase() + ')', 'green outline = ran at HIGH OS priority', tmax)}</div>`;
+}
+
+presets(); telemetry(); setInterval(telemetry, 1500); pollSched();
+
+</script>
+</body>
+</html>
